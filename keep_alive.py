@@ -1,17 +1,14 @@
-# keep_alive.py
 from flask import Flask
 from threading import Thread
-import os
 
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Бот СК Вместе работает."
+    return "Бот СК Вместе работает!"
 
 def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=10000)
 
 def keep_alive():
     t = Thread(target=run)
