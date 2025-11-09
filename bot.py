@@ -24,7 +24,7 @@ if not BOT_TOKEN or not ADMIN_CHAT_ID:
 bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
 dp = Dispatcher(bot)
 
-# === Клавиатуры ===
+# === Главное меню ===
 main_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
 main_kb.add("📁 Каталог проектов", "🏗 Расчёт стоимости дома")
 main_kb.add("📞 Контакты", "ℹ️ О компании")
@@ -37,10 +37,7 @@ async def cmd_start(message: types.Message):
         "📁 Отправлю каталог проектов\n"
         "🏠 Помогу рассчитать стоимость дома\n"
         "📐 Или подобрать архитектурное решение\n\n"
-        "📞 Наши контакты:\n"
-        "+7 (918) 538-14-55\n"
-        "band444@yandex.ru\n\n"
-        "🌐 Проектируем мечты, строим желания 💚"
+        "🌐 <i>Проектируем мечты, строим желания</i> 💚"
     )
     await message.answer(text, reply_markup=main_kb, parse_mode="HTML")
 
@@ -51,15 +48,39 @@ async def send_catalog(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == "🏗 Расчёт стоимости дома")
 async def calc_cost(message: types.Message):
-    await message.answer("💬 Сколько этажей будет в доме?", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add("1 этаж", "2 этажа", "С мансардой", "Отмена"))
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("1 этаж", "2 этажа", "С мансардой", "Отмена")
+    await message.answer("💬 Сколько этажей будет в доме?", reply_markup=kb)
 
+# === Контакты ===
 @dp.message_handler(lambda message: message.text == "📞 Контакты")
 async def send_contacts(message: types.Message):
-    await message.answer("📞 Контакты компании СК «Вместе»:\n\n+7 (918) 538-14-55\nband444@yandex.ru\nhttps://t.me/skVmeste")
+    inline_kb = types.InlineKeyboardMarkup(row_width=1)
+    inline_kb.add(
+        types.InlineKeyboardButton("🏠 Сайт СК Вместе", url="https://ск-вместе.рф"),
+        types.InlineKeyboardButton("📐 Архитектурное проектирование", url="https://ск-вместе-проектирование.рф")
+    )
 
+    contacts_text = (
+        "📞 <b>Контакты СК «Вместе»</b>\n\n"
+        "📱 +7 (928) 621-11-05\n"
+        "📱 +7 (919) 892-94-02\n"
+        "📱 +7 (918) 538-14-55\n\n"
+        "✉️ band444@yandex.ru\n"
+        "🌍 <a href='https://ск-вместе.рф'>СК Вместе</a>"
+    )
+
+    await message.answer(contacts_text, reply_markup=inline_kb, parse_mode="HTML")
+
+# === О компании ===
 @dp.message_handler(lambda message: message.text == "ℹ️ О компании")
 async def about_company(message: types.Message):
-    await message.answer("🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания.\n\nЗанимаемся строительством загородных коттеджей под ключ: от фундамента до отделки.", parse_mode="HTML")
+    await message.answer(
+        "🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания 💚\n\n"
+        "Занимаемся строительством загородных коттеджей под ключ: от фундамента до отделки.\n"
+        "🧱 Фундамент, стены, кровля, инженерия, отделка — всё делаем своими силами.",
+        parse_mode="HTML"
+    )
 
 # === Flask + Telegram Polling ===
 def start_bot():
