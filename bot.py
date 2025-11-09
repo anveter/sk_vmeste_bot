@@ -1,144 +1,70 @@
-import logging
-import csv
 import os
-from aiogram import Bot, Dispatcher, types, executor
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
-import threading
-from keep_alive import keep_alive
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
+from flask import Flask
+from threading import Thread
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "0"))
+# === Flask для Render / UptimeRobot ===
+app = Flask(__name__)
 
-SITE_URL = os.environ.get("SITE_URL", "https://ск-вместе.рф/")
-TG_CHANNEL = os.environ.get("TG_CHANNEL", "https://t.me/skVmeste")
-PHONE_1 = os.environ.get("PHONE_1", "+7 (928) 621-11-05")
-PHONE_2 = os.environ.get("PHONE_2", "8 (919) 892-94-02")
-PHONE_3 = os.environ.get("PHONE_3", "8 (918) 538-14-55")
+@app.route('/')
+def home():
+    return "Бот СК Вместе работает 💚"
 
-if not BOT_TOKEN or ADMIN_CHAT_ID == 0:
+def run_flask():
+    app.run(host="0.0.0.0", port=10000)
+
+# === Telegram Bot ===
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+
+if not BOT_TOKEN or not ADMIN_CHAT_ID:
     raise RuntimeError("Не заданы BOT_TOKEN или ADMIN_CHAT_ID в переменных окружения")
 
-logging.basicConfig(level=logging.INFO)
-bot = Bot(token=BOT_TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
+dp = Dispatcher(bot)
 
-class Quiz1(StatesGroup):
-    q1 = State(); q2 = State(); q3 = State(); q4 = State(); q5 = State(); q6 = State(); name = State(); phone = State()
+# === Клавиатуры ===
+main_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+main_kb.add("📁 Каталог проектов", "🏗 Расчёт стоимости дома")
+main_kb.add("📞 Контакты", "ℹ️ О компании")
 
-class Quiz2(StatesGroup):
-    q1 = State(); q2 = State(); q3 = State(); q4 = State(); q5 = State(); q6 = State(); name = State(); phone = State()
-
-main_kb = InlineKeyboardMarkup(row_width=2)
-main_kb.add(
-    InlineKeyboardButton("📁 Каталог проектов", callback_data="send_catalog"),
-    InlineKeyboardButton("🏠 Расчёт стоимости дома", callback_data="quiz1"),
-    InlineKeyboardButton("📐 Архитектурное проектирование", callback_data="quiz2"),
-)
-main_kb.add(
-    InlineKeyboardButton("🌐 Сайт", url=SITE_URL),
-    InlineKeyboardButton("📢 Канал", url=TG_CHANNEL)
-)
-main_kb.add(InlineKeyboardButton("📞 Оставить контакт", callback_data="leave_contact"))
-
-cancel_kb = ReplyKeyboardMarkup(resize_keyboard=True).add("Отмена")
-
-CSV_FILE = "leads.csv"
-
-def save_to_csv(row: dict):
-    file_exists = os.path.isfile(CSV_FILE)
-    with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(row)
-
-async def notify_admin(text):
-    try:
-        await bot.send_message(ADMIN_CHAT_ID, text, parse_mode="HTML")
-    except Exception as e:
-        logging.error("Ошибка уведомления админа: %s", e)
-
+# === Команда /start ===
 @dp.message_handler(commands=["start", "help"])
 async def cmd_start(message: types.Message):
     text = (
-        "👋 Привет! Я бот компании <b>СК «Вместе»</b>.
-
-"
-        "📁 Отправлю каталог проектов
-"
-        "🏠 Помогу рассчитать стоимость дома
-"
-        "📐 Или подобрать архитектурное решение
-
-"
-        "📞 Наши контакты:
-"
-        f"{PHONE_1}\n{PHONE_2}\n{PHONE_3}\n"
+        "👋 Привет! Я бот компании <b>СК «Вместе»</b>.\n\n"
+        "📁 Отправлю каталог проектов\n"
+        "🏠 Помогу рассчитать стоимость дома\n"
+        "📐 Или подобрать архитектурное решение\n\n"
+        "📞 Наши контакты:\n"
+        "+7 (918) 538-14-55\n"
+        "band444@yandex.ru\n\n"
+        "🌐 Проектируем мечты, строим желания 💚"
     )
     await message.answer(text, reply_markup=main_kb, parse_mode="HTML")
 
-@dp.callback_query_handler(lambda c: True)
-async def callback_handler(c: types.CallbackQuery):
-    data = c.data
+# === Обработчики кнопок ===
+@dp.message_handler(lambda message: message.text == "📁 Каталог проектов")
+async def send_catalog(message: types.Message):
+    await message.answer("📂 Вот ссылка для скачивания каталога проектов:\nhttps://disk.yandex.ru/d/ваша_ссылка")
 
-    if data == "send_catalog":
-        url = "https://disk.yandex.ru/i/UBQkSxjZVyUKPw"
-        kb = InlineKeyboardMarkup().add(
-            InlineKeyboardButton("📥 Скачать каталог", url=url)
-        )
-        await bot.send_message(
-            c.from_user.id,
-            "🏠 Вот каталог проектов СК «Вместе»:
-Нажмите на кнопку, чтобы скачать.
+@dp.message_handler(lambda message: message.text == "🏗 Расчёт стоимости дома")
+async def calc_cost(message: types.Message):
+    await message.answer("💬 Сколько этажей будет в доме?", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add("1 этаж", "2 этажа", "С мансардой", "Отмена"))
 
-"
-            f"📁 <a href='{url}'>Скачать PDF</a>",
-            reply_markup=kb,
-            parse_mode="HTML"
-        )
-        await c.answer()
-        return
+@dp.message_handler(lambda message: message.text == "📞 Контакты")
+async def send_contacts(message: types.Message):
+    await message.answer("📞 Контакты компании СК «Вместе»:\n\n+7 (918) 538-14-55\nband444@yandex.ru\nhttps://t.me/skVmeste")
 
-    if data == "quiz1":
-        await bot.send_message(c.from_user.id, "📊 Расчёт стоимости дома
+@dp.message_handler(lambda message: message.text == "ℹ️ О компании")
+async def about_company(message: types.Message):
+    await message.answer("🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания.\n\nЗанимаемся строительством загородных коттеджей под ключ: от фундамента до отделки.", parse_mode="HTML")
 
-Сколько этажей будет в доме?",
-                               reply_markup=ReplyKeyboardMarkup(resize_keyboard=True)
-                               .add("1 этаж", "С мансардой", "2 этажа").add("Отмена"))
-        await Quiz1.q1.set()
-        await c.answer()
-        return
-
-    if data == "quiz2":
-        await bot.send_message(c.from_user.id, "📐 Архитектурное проектирование
-
-Сколько этажей планируете?",
-                               reply_markup=ReplyKeyboardMarkup(resize_keyboard=True)
-                               .add("1 этаж", "С мансардой", "2 этажа").add("Отмена"))
-        await Quiz2.q1.set()
-        await c.answer()
-        return
-
-    if data == "leave_contact":
-        kb = ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("📱 Отправить контакт", request_contact=True))
-        await bot.send_message(c.from_user.id, "📞 Отправьте свой номер для связи:", reply_markup=kb)
-        await c.answer()
-        return
-
-@dp.message_handler(lambda m: m.text == "Отмена", state="*")
-async def cancel(message: types.Message, state: FSMContext):
-    await state.finish()
-    await message.answer("Действие отменено.", reply_markup=main_kb)
-
-@dp.message_handler()
-async def fallback(message: types.Message):
-    await message.answer("Выберите действие из меню 👇", reply_markup=main_kb)
+# === Flask + Telegram Polling ===
+def start_bot():
+    executor.start_polling(dp, skip_updates=True)
 
 if __name__ == "__main__":
-    threading.Thread(target=keep_alive).start()
-    print("Бот запущен и слушает Telegram...")
-    executor.start_polling(dp, skip_updates=True)
+    Thread(target=run_flask).start()
+    Thread(target=start_bot).start()
