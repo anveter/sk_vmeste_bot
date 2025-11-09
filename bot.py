@@ -1,4 +1,5 @@
 import os
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 from flask import Flask
@@ -41,7 +42,7 @@ async def cmd_start(message: types.Message):
         "📐 Или подобрать архитектурное решение\n\n"
         "🌐 <i>Проектируем мечты, строим желания</i> 💚"
     )
-    await message.answer(text, reply_markup=main_kb, parse_mode="HTML")
+    await message.answer(text, reply_markup=main_kb)
 
 # === Обработчики кнопок ===
 @dp.message_handler(lambda message: message.text == "📁 Каталог проектов")
@@ -72,14 +73,14 @@ async def send_contacts(message: types.Message):
         "🌍 <a href='https://ск-вместе.рф'>СК Вместе</a>"
     )
 
-    await message.answer(contacts_text, reply_markup=inline_kb, parse_mode="HTML")
+    await message.answer(contacts_text, reply_markup=inline_kb)
 
 # === О компании ===
 @dp.message_handler(lambda message: message.text == "ℹ️ О компании")
 async def about_company(message: types.Message):
     await message.answer(
         "🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания 💚\n\n"
-        "Занимаемся строительством загородных коттеджей под ключ: "
+        "Строим загородные коттеджи под ключ: "
         "фундамент, стены, кровля, инженерия и отделка — всё своими силами.",
         parse_mode="HTML"
     )
@@ -91,8 +92,11 @@ async def on_startup(dp):
 
 # === Flask + Telegram Polling ===
 def start_bot():
+    # создаём отдельный event loop для потока (исправляет RuntimeError)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
 if __name__ == "__main__":
-    Thread(target=run_flask).start()
-    Thread(target=start_bot).start()
+    Thread(target=run_flask, daemon=True).start()
+    Thread(target=start_bot, daemon=True).start()
