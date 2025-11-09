@@ -13,7 +13,6 @@ def home():
     return "Бот СК Вместе работает 💚"
 
 def run_flask():
-    # Render выделяет порт через переменную окружения PORT
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
@@ -90,22 +89,23 @@ async def on_startup(dp):
     await bot.delete_webhook(drop_pending_updates=True)
     print("✅ Webhook удалён, начинаю polling")
 
-# === Асинхронный запуск бота (Render fix) ===
-async def bot_startup():
-    await bot.delete_webhook(drop_pending_updates=True)
-    print("✅ Бот СК Вместе запущен и слушает обновления...")
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
-
-# === Flask + Telegram Polling (Render fix) ===
+# === Функция запуска бота в отдельном потоке ===
 def start_bot():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(bot_startup())
+    loop.run_until_complete(bot.delete_webhook(drop_pending_updates=True))
+    print("✅ Бот СК Вместе запущен и слушает обновления...")
+    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
+# === Главный запуск ===
 if __name__ == "__main__":
-    # запускаем Flask в отдельном потоке
+    # Flask запускается в основном потоке
     flask_thread = Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    # запускаем бота в основном потоке
-    start_bot()
+    # Aiogram в отдельном потоке (чтобы не мешал Flask)
+    bot_thread = Thread(target=start_bot, daemon=True)
+    bot_thread.start()
+
+    # Чтобы процесс не завершался (Render fix)
+    bot_thread.join()
