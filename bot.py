@@ -12,8 +12,10 @@ def home():
     return "Бот СК Вместе работает 💚"
 
 def run_flask():
+    # Render выделяет порт через переменную окружения PORT
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 # === Telegram Bot ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
@@ -77,14 +79,19 @@ async def send_contacts(message: types.Message):
 async def about_company(message: types.Message):
     await message.answer(
         "🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания 💚\n\n"
-        "Занимаемся строительством загородных коттеджей под ключ: от фундамента до отделки.\n"
-        "🧱 Фундамент, стены, кровля, инженерия, отделка — всё делаем своими силами.",
+        "Занимаемся строительством загородных коттеджей под ключ: "
+        "фундамент, стены, кровля, инженерия и отделка — всё своими силами.",
         parse_mode="HTML"
     )
 
+# === Startup: удаляем webhook перед polling ===
+async def on_startup(dp):
+    await bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Webhook удалён, начинаю polling")
+
 # === Flask + Telegram Polling ===
 def start_bot():
-    executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
 if __name__ == "__main__":
     Thread(target=run_flask).start()
