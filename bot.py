@@ -90,13 +90,22 @@ async def on_startup(dp):
     await bot.delete_webhook(drop_pending_updates=True)
     print("✅ Webhook удалён, начинаю polling")
 
-# === Flask + Telegram Polling ===
-def start_bot():
-    # создаём отдельный event loop для потока (исправляет RuntimeError)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# === Асинхронный запуск бота (Render fix) ===
+async def bot_startup():
+    await bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Бот СК Вместе запущен и слушает обновления...")
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
+# === Flask + Telegram Polling (Render fix) ===
+def start_bot():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(bot_startup())
+
 if __name__ == "__main__":
-    Thread(target=run_flask, daemon=True).start()
-    Thread(target=start_bot, daemon=True).start()
+    # запускаем Flask в отдельном потоке
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+
+    # запускаем бота в основном потоке
+    start_bot()
