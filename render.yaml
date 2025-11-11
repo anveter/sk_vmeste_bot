@@ -1,8 +1,0 @@
-
-services:
-  - type: web
-    name: sk_vmeste_bot
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python bot.py"
-    pythonVersion: 3.10.13
