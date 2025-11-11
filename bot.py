@@ -4,8 +4,7 @@ from threading import Thread
 from flask import Flask
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
-    InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 )
 from aiogram.utils import executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -27,7 +26,7 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 # ---------------------------------------------
-# FLASK keep-alive для Railway / Render
+# FLASK keep-alive для Railway
 # ---------------------------------------------
 app = Flask(__name__)
 
@@ -44,23 +43,13 @@ def run_flask():
 # ---------------------------------------------
 def main_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(
-        KeyboardButton("📋 О компании"),
-        KeyboardButton("📁 Каталог проектов"),
-    )
-    kb.add(
-        KeyboardButton("🏗 Расчёт стоимости дома"),
-        KeyboardButton("✏️ Архитектурное проектирование"),
-    )
-    kb.add(
-        KeyboardButton("🌐 Сайты компании"),
-        KeyboardButton("📞 Контакты"),
-    )
-    kb.add(KeyboardButton("📝 Оставить заявку"))
+    kb.row("📋 О компании", "📁 Каталог проектов")
+    kb.row("🏗 Расчёт стоимости дома", "✏️ Архитектурное проектирование")
+    kb.row("🌐 Сайты компании", "📞 Контакты")
     return kb
 
 # ---------------------------------------------
-# СОСТОЯНИЯ ДЛЯ КВИЗОВ И ЗАЯВКИ
+# СОСТОЯНИЯ
 # ---------------------------------------------
 class QuizBuild(StatesGroup):
     q1 = State(); q2 = State(); q3 = State(); q4 = State(); q5 = State(); phone = State()
@@ -80,7 +69,8 @@ async def cmd_start(message: types.Message):
     text = (
         "👋 Привет! Я бот компании <b>СК «Вместе»</b>\n\n"
         "Помогу рассчитать стоимость дома, подобрать проект или заказать архитектурное решение.\n\n"
-        "Выберите действие из меню ниже 👇"
+        "Выберите действие из меню ниже 👇\n\n"
+        "📝 Или оставьте заявку здесь 👉 /lead"
     )
     await message.answer(text, reply_markup=main_menu())
 
@@ -89,12 +79,11 @@ async def cmd_start(message: types.Message):
 # ---------------------------------------------
 @dp.message_handler(lambda m: m.text == "📋 О компании")
 async def about(message: types.Message):
-    text = (
+    await message.answer(
         "🏗 <b>СК «Вместе»</b> — проектируем мечты, строим желания 💚\n\n"
-        "Мы занимаемся строительством загородных коттеджей под ключ: фундамент, стены, кровля, инженерия и отделка.\n\n"
-        "Наш сайт: https://ск-вместе.рф"
+        "Мы строим загородные коттеджи под ключ — фундамент, стены, кровля, инженерия и отделка.\n\n"
+        "🌐 Сайт: https://ск-вместе.рф"
     )
-    await message.answer(text)
 
 @dp.message_handler(lambda m: m.text == "📁 Каталог проектов")
 async def catalog(message: types.Message):
@@ -115,12 +104,11 @@ async def contacts(message: types.Message):
         "📞 <b>Контакты СК «Вместе»</b>\n\n"
         "📱 +7 (918) 538-14-55\n"
         "✉️ band444@yandex.ru\n"
-        "📲 Telegram: https://t.me/skVmeste\n\n"
-        "🏠 Сайт: https://ск-вместе.рф"
+        "📲 Telegram: https://t.me/skVmeste"
     )
 
 # ---------------------------------------------
-# ФУНКЦИИ ДЛЯ КВИЗОВ
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ---------------------------------------------
 def build_keyboard(options):
     kb = InlineKeyboardMarkup(row_width=2)
@@ -146,7 +134,7 @@ def format_quiz(data: dict, quiz_name: str, phone: str) -> str:
     )
 
 # ---------------------------------------------
-# КВИЗ 1 — РАСЧЁТ СТОИМОСТИ
+# КВИЗ 1 — СТРОИТЕЛЬСТВО
 # ---------------------------------------------
 @dp.message_handler(lambda m: m.text == "🏗 Расчёт стоимости дома")
 async def start_quiz_build(message: types.Message, state: FSMContext):
@@ -272,9 +260,9 @@ async def project_phone_contact(message: types.Message, state: FSMContext):
     await state.finish()
 
 # ---------------------------------------------
-# ОСТАВИТЬ ЗАЯВКУ
+# /LEAD — ОСТАВИТЬ ЗАЯВКУ
 # ---------------------------------------------
-@dp.message_handler(lambda m: m.text == "📝 Оставить заявку")
+@dp.message_handler(commands=["lead"])
 async def form_start(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer("✍️ Введите, пожалуйста, ваше имя:")
@@ -306,6 +294,7 @@ async def on_startup(dp: Dispatcher):
         pass
     await bot.set_my_commands([
         BotCommand("start", "Главное меню"),
+        BotCommand("lead", "Оставить заявку"),
         BotCommand("help", "Помощь")
     ])
 
