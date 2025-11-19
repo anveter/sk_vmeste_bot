@@ -157,7 +157,7 @@ async def sites(message: types.Message):
 @dp.message_handler(lambda m: m.text == "📞 Контакты")
 async def contacts(message: types.Message):
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("💬 Написать в Telegram", url="https://t.me/skVmeste"))
+    kb.add(InlineKeyboardButton("Telegram-канал", url="https://t.me/skVmeste"))
 
     await message.answer(
         "📞 <b>Контакты СК «Вместе»</b>\n\n"
