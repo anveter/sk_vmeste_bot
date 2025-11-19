@@ -211,7 +211,7 @@ async def quiz_build(message: types.Message, state: FSMContext):
 async def qb1(call, state):
     await call.answer()
     await state.update_data(q1=call.data)
-    await call.message.edit_text("Вопрос 2: Материал дома?")
+    await call.message.edit_text("Вопрос 2: Из какого материала будем строить дом?")
     await call.message.edit_reply_markup(build_keyboard(["Кирпич", "Монолит", "Газобетон", "Пока не определился"]))
     await QuizBuild.q2.set()
 
@@ -219,7 +219,7 @@ async def qb1(call, state):
 async def qb2(call, state):
     await call.answer()
     await state.update_data(q2=call.data)
-    await call.message.edit_text("Вопрос 3: Площадь?")
+    await call.message.edit_text("Вопрос 3: Какую общую площадь Вы рассматриваете?")
     await call.message.edit_reply_markup(build_keyboard(["До 100 м²", "100–150 м²", "150–200 м²", "Больше 200 м²"]))
     await QuizBuild.q3.set()
 
@@ -227,7 +227,7 @@ async def qb2(call, state):
 async def qb3(call, state):
     await call.answer()
     await state.update_data(q3=call.data)
-    await call.message.edit_text("Вопрос 4: Проект?")
+    await call.message.edit_text("Вопрос 4: У Вас есть проект, который нравится?")
     await call.message.edit_reply_markup(build_keyboard([
         "Есть готовый проект",
         "Есть чертёж или картинка",
@@ -240,7 +240,7 @@ async def qb3(call, state):
 async def qb4(call, state):
     await call.answer()
     await state.update_data(q4=call.data)
-    await call.message.edit_text("Вопрос 5: Сроки?")
+    await call.message.edit_text("Вопрос 5: Когда вы планируете начать строительство?")
     await call.message.edit_reply_markup(build_keyboard([
         "В ближайшее время", "1–3 месяца", "3–6 месяцев", "Нужна консультация"
     ]))
