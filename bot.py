@@ -117,7 +117,7 @@ async def about(message: types.Message):
     kb = InlineKeyboardMarkup()
     kb.add(
         InlineKeyboardButton("📝 Оставить заявку", callback_data="lead_open"),
-        InlineKeyboardButton("💬 Написать нам", url="https://t.me/skVmeste")
+        InlineKeyboardButton("💬 Написать нам", url="https://t.me/wmeste851")
     )
 
     await message.answer(text, reply_markup=kb)
