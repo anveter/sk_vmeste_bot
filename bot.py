@@ -198,72 +198,157 @@ def format_quiz(data, name, phone):
 # ---------------------------------------------
 # КВИЗ №1 — СТРОИТЕЛЬСТВО
 # ---------------------------------------------
-@dp.message_handler(lambda m: m.text == "🏗 Расчёт стоимости дома")
-async def quiz_build(message: types.Message, state: FSMContext):
+# -------------------------------------------------------
+# КРАСИВЫЙ СТАРТ КВИЗА — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ
+# -------------------------------------------------------
+@dp.message_handler(lambda m: m.text == "✏️ Архитектурное проектирование")
+async def quiz_project_intro(message: types.Message, state: FSMContext):
     await state.finish()
-    await message.answer(
-        "🏗 Вопрос 1: Сколько этажей будет в доме?",
-        reply_markup=build_keyboard(["1 этаж", "С мансардой", "2 этажа"])
-    )
-    await QuizBuild.q1.set()
 
-@dp.callback_query_handler(state=QuizBuild.q1)
-async def qb1(call, state):
+    # 1) Фото-приглашение (можешь заменить ссылку на своё фото)
+    await message.answer_photo(
+        photo="https://i.imgur.com/FkZyPml.jpeg",
+        caption="📐 <b>Архитектурное проектирование дома</b>"
+    )
+
+    # 2) typing эффект
+    await bot.send_chat_action(message.chat.id, "typing")
+    await asyncio.sleep(1.5)
+
+    # 3) Текст-приглашение
+    await message.answer(
+        "Чтобы мы подготовили предложение по проектированию, "
+        "ответьте, пожалуйста, на несколько вопросов. Это займёт до 30 секунд ⏱"
+    )
+
+    # 4) typing эффект
+    await bot.send_chat_action(message.chat.id, "typing")
+    await asyncio.sleep(1)
+
+    # 5) кнопка «Начать»
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("➡️ Начать проектирование", callback_data="start_quiz_project"))
+    await message.answer("Готовы начать?", reply_markup=kb)
+
+
+# -------------------------------------------------------
+# КНОПКА «Начать проектирование»
+# -------------------------------------------------------
+@dp.callback_query_handler(lambda c: c.data == "start_quiz_project")
+async def quiz_project_start(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
+    await state.finish()
+
+    await call.message.edit_text("✏️ Вопрос 1: Из какого материала будем строить дом?")
+    await call.message.edit_reply_markup(build_keyboard([
+        "Кирпич",
+        "Монолит",
+        "Газобетон",
+        "Пока не определился — нужна консультация"
+    ]))
+
+    await QuizProject.q1.set()
+
+
+# -------------------------------------------------------
+# ВОПРОС 2
+# -------------------------------------------------------
+@dp.callback_query_handler(state=QuizProject.q1)
+async def qp1(call, state):
     await call.answer()
     await state.update_data(q1=call.data)
-    await call.message.edit_text("Вопрос 2: Из какого материала будем строить дом?")
-    await call.message.edit_reply_markup(build_keyboard(["Кирпич", "Монолит", "Газобетон", "Пока не определился"]))
-    await QuizBuild.q2.set()
 
-@dp.callback_query_handler(state=QuizBuild.q2)
-async def qb2(call, state):
+    await call.message.edit_text("Вопрос 2: Сколько этажей будет в доме?")
+    await call.message.edit_reply_markup(build_keyboard([
+        "1 этаж",
+        "2 этажа",
+        "3 этажа",
+        "Другое"
+    ]))
+    await QuizProject.q2.set()
+
+
+# -------------------------------------------------------
+# ВОПРОС 3
+# -------------------------------------------------------
+@dp.callback_query_handler(state=QuizProject.q2)
+async def qp2(call, state):
     await call.answer()
     await state.update_data(q2=call.data)
-    await call.message.edit_text("Вопрос 3: Какую общую площадь Вы рассматриваете?")
-    await call.message.edit_reply_markup(build_keyboard(["До 100 м²", "100–150 м²", "150–200 м²", "Больше 200 м²"]))
-    await QuizBuild.q3.set()
 
-@dp.callback_query_handler(state=QuizBuild.q3)
-async def qb3(call, state):
+    await call.message.edit_text("Вопрос 3: Какую общую площадь рассматриваете?")
+    await call.message.edit_reply_markup(build_keyboard([
+        "До 150 м²",
+        "До 250 м²",
+        "До 500 м²",
+        "Более 500 м²"
+    ]))
+    await QuizProject.q3.set()
+
+
+# -------------------------------------------------------
+# ВОПРОС 4 (Обновлённый — с вариантом «Выберу из каталога»)
+# -------------------------------------------------------
+@dp.callback_query_handler(state=QuizProject.q3)
+async def qp3(call, state):
     await call.answer()
     await state.update_data(q3=call.data)
-    await call.message.edit_text("Вопрос 4: У Вас есть проект, который нравится?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "Есть готовый проект",
-        "Есть чертёж или картинка",
-        "Выберу из каталога",
-        "Хочу индивидуальный проект"
-    ]))
-    await QuizBuild.q4.set()
 
-@dp.callback_query_handler(state=QuizBuild.q4)
-async def qb4(call, state):
+    await call.message.edit_text("Вопрос 4: Есть ли у вас эскиз-проект, который нравится?")
+    await call.message.edit_reply_markup(build_keyboard([
+        "Да, есть проект который нравится",
+        "Есть картинка/рисунок/фото",
+        "Выберу из каталога",
+        "Нет"
+    ]))
+    await QuizProject.q4.set()
+
+
+# -------------------------------------------------------
+# ВОПРОС 5
+# -------------------------------------------------------
+@dp.callback_query_handler(state=QuizProject.q4)
+async def qp4(call, state):
     await call.answer()
     await state.update_data(q4=call.data)
-    await call.message.edit_text("Вопрос 5: Когда вы планируете начать строительство?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "В ближайшее время", "1–3 месяца", "3–6 месяцев", "Нужна консультация"
-    ]))
-    await QuizBuild.q5.set()
 
-@dp.callback_query_handler(state=QuizBuild.q5)
-async def qb5(call, state):
+    await call.message.edit_text("Вопрос 5: Когда хотели бы начать проектирование?")
+    await call.message.edit_reply_markup(build_keyboard([
+        "В ближайшее время",
+        "Через 1–3 месяца",
+        "Через 3–6 месяцев",
+        "Нужна консультация"
+    ]))
+    await QuizProject.q5.set()
+
+
+# -------------------------------------------------------
+# ЗАПРОС ТЕЛЕФОНА
+# -------------------------------------------------------
+@dp.callback_query_handler(state=QuizProject.q5)
+async def qp5(call, state):
     await call.answer()
     await state.update_data(q5=call.data)
-    await call.message.answer("📲 Оставьте номер телефона:", reply_markup=phone_kb())
-    await QuizBuild.phone.set()
 
-@dp.message_handler(content_types=types.ContentTypes.CONTACT, state=QuizBuild.phone)
-async def qb_phone(message, state):
+    await call.message.answer("📲 Оставьте телефон для связи с архитектором:", reply_markup=phone_kb())
+    await QuizProject.phone.set()
+
+
+# -------------------------------------------------------
+# ФИНАЛ — ОТПРАВКА ЗАЯВКИ
+# -------------------------------------------------------
+@dp.message_handler(content_types=types.ContentTypes.CONTACT, state=QuizProject.phone)
+async def qp_phone(message, state):
     phone = message.contact.phone_number
     data = await state.get_data()
-    await bot.send_message(ADMIN_CHAT_ID, format_quiz(data, "Строительство", phone))
-    await message.answer("✅ Спасибо! Мы свяжемся с вами.", reply_markup=main_menu())
-    await state.finish()
 
-# ---------------------------------------------
-# КВИЗ №2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ
-# ---------------------------------------------
+    await bot.send_message(
+        ADMIN_CHAT_ID,
+        format_quiz(data, "Архитектурное проектирование", phone)
+    )
+
+    await message.answer("✅ Спасибо! Архитектор свяжется с вами.", reply_markup=main_menu())
+    await state.finish()
 # ---------------------------------------------
 # КВИЗ №2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ (ОБНОВЛЁННЫЙ)
 # ---------------------------------------------
