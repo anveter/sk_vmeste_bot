@@ -1,44 +1,30 @@
 import os
 import logging
 import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardMarkup, InlineKeyboardButton
-)
+from aiogram import Bot, Dispatcher, types, executor
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram import executor
 
-# ---------------------------------------------
-# ЛОГИ
-# ---------------------------------------------
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
 if not BOT_TOKEN or not ADMIN_CHAT_ID:
-    raise RuntimeError("❌ BOT_TOKEN / ADMIN_CHAT_ID не заданы в переменных окружения")
+    raise RuntimeError("BOT_TOKEN и ADMIN_CHAT_ID обязательны!")
 
 bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
-dp = Dispatcher(bot, storage=MemoryStorage())
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
 
-# =============================================
-# МЕНЮ И КЛАВИАТУРЫ
-# =============================================
+# ==================== КЛАВИАТУРЫ ====================
 def main_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row("📋 О компании", "📁 Каталог проектов")
     kb.row("🏗 Расчёт стоимости дома", "✏️ Архитектурное проектирование")
     kb.row("🌐 Сайты компании", "📞 Контакты")
-    return kb
-
-def build_keyboard(options):
-    kb = InlineKeyboardMarkup(row_width=2)
-    for o in options:
-        kb.add(InlineKeyboardButton(o, callback_data=o))
     return kb
 
 def phone_kb():
@@ -47,9 +33,14 @@ def phone_kb():
     kb.add(KeyboardButton("Отправлю позже"))
     return kb
 
-# =============================================
-# СОСТОЯНИЯ
-# =============================================
+# Новый build_keyboard с кодами (текст, код)
+def ikb(options):
+    kb = InlineKeyboardMarkup(row_width=2)
+    for text, code in options:
+        kb.add(InlineKeyboardButton(text, callback_data=code))
+    return kb
+
+# ==================== СОСТОЯНИЯ ====================
 class QuizBuild(StatesGroup):
     waiting = State()
     phone = State()
@@ -62,27 +53,11 @@ class FormLead(StatesGroup):
     name = State()
     phone = State()
 
-# =============================================
-# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-# =============================================
-def format_quiz(data, name, phone):
-    return (
-        f"📋 <b>Анкета ({name})</b>\n\n"
-        f"🧱 Материал: {data.get('q1')}\n"
-        f"🏠 Этажность: {data.get('q2')}\n"
-        f"📐 Площадь: {data.get('q3')}\n"
-        f"📄 Эскиз-проект: {data.get('q4')}\n"
-        f"🕒 Сроки: {data.get('q5')}\n"
-        f"📞 Телефон: {phone}"
-    )
-
-# =============================================
-# /START
-# =============================================
+# ==================== СТАРТ ====================
 @dp.message_handler(commands=["start", "help"])
 async def cmd_start(message: types.Message):
     await message.answer(
-        "👋 Привет! Я бот компании <b>СК «Вместе»</b>\n\n"
+        "👋 Привет! Я бот компании <b>СК «Вместе</b>\n\n"
         "Помогу рассчитать стоимость дома, подобрать проект "
         "или заказать архитектурное решение.\n\n"
         "Выберите действие из меню ниже 👇\n\n"
@@ -90,9 +65,7 @@ async def cmd_start(message: types.Message):
         reply_markup=main_menu()
     )
 
-# =============================================
-# О КОМПАНИИ
-# =============================================
+# ==================== ОСТАЛЬНЫЕ РАЗДЕЛЫ (без изменений) ====================
 @dp.message_handler(lambda m: m.text == "📋 О компании")
 async def about(message: types.Message):
     text = (
@@ -115,48 +88,19 @@ async def about(message: types.Message):
         "телефона или напишите нам прямо сейчас.\n"
         "Наш специалист свяжется с вами, уточнит детали и предложит лучшие варианты под ваш бюджет."
     )
-
-    kb = InlineKeyboardMarkup()
-    kb.add(
+    kb = InlineKeyboardMarkup().add(
         InlineKeyboardButton("📝 Оставить заявку", callback_data="lead_open"),
         InlineKeyboardButton("💬 Написать менеджеру", url="https://t.me/wmeste851")
     )
-
     await message.answer(text, reply_markup=kb)
 
-# =============================================
-# ОСТАВИТЬ ЗАЯВКУ
-# =============================================
-@dp.callback_query_handler(lambda c: c.data == "lead_open")
-async def lead_open(call: types.CallbackQuery, state: FSMContext):
-    await call.answer()
-    await state.finish()
-    await call.message.answer("✍️ Введите ваше имя:")
-    await FormLead.name.set()
-
-@dp.message_handler(commands=["lead"])
-async def lead(message: types.Message, state: FSMContext):
-    await state.finish()
-    await message.answer("✍️ Введите ваше имя:")
-    await FormLead.name.set()
-
-@dp.message_handler(state=FormLead.name)
-async def lead_name(message: types.Message, state: FSMContext):
-    await state.update_data(name=message.text)
-    await message.answer("📱 Теперь отправьте телефон:", reply_markup=phone_kb())
-    await FormLead.phone.set()
-
-# =============================================
-# КАТАЛОГ / САЙТЫ / КОНТАКТЫ
-# =============================================
 @dp.message_handler(lambda m: m.text == "📁 Каталог проектов")
 async def catalog(message: types.Message):
     await message.answer("📂 Каталог проектов:\nhttps://disk.yandex.ru/i/UBQkSxjZVyUKPw")
 
 @dp.message_handler(lambda m: m.text == "🌐 Сайты компании")
 async def sites(message: types.Message):
-    kb = InlineKeyboardMarkup()
-    kb.add(
+    kb = InlineKeyboardMarkup().add(
         InlineKeyboardButton("🏠 Основной сайт", url="https://ск-вместе.рф"),
         InlineKeyboardButton("📐 Проектирование", url="https://ск-вместе-проектирование.рф")
     )
@@ -166,14 +110,13 @@ async def sites(message: types.Message):
 async def contacts(message: types.Message):
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
-        InlineKeyboardButton("💬 Написить нам", url="https://t.me/wmeste851"),
+        InlineKeyboardButton("💬 Написать нам", url="https://t.me/wmeste851"),
         InlineKeyboardButton("📣 Telegram-канал", url="https://t.me/skVmeste")
     )
     kb.add(
         InlineKeyboardButton("🟢 WhatsApp", url="https://wa.me/79286211105"),
         InlineKeyboardButton("📞 Позвонить", url="tel:+79286211105")
     )
-
     await message.answer(
         "📞 <b>Контакты СК «Вместе»</b>\n\n"
         "📱 <b>Телефоны:</b>\n"
@@ -187,19 +130,37 @@ async def contacts(message: types.Message):
         reply_markup=kb
     )
 
-# =============================================
-# УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК КОНТАКТА
-# =============================================
+# ==================== ЗАЯВКА ====================
+@dp.callback_query_handler(lambda c: c.data == "lead_open")
+async def lead_open(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
+    await state.finish()
+    await call.message.answer("✍️ Введите ваше имя:")
+    await FormLead.name.set()
+
+@dp.message_handler(commands=["lead"])
+async def lead_cmd(message: types.Message, state: FSMContext):
+    await state.finish()
+    await message.answer("✍️ Введите ваше имя:")
+    await FormLead.name.set()
+
+@dp.message_handler(state=FormLead.name)
+async def lead_name(message: types.Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await message.answer("📱 Теперь отправьте телефон:", reply_markup=phone_kb())
+    await FormLead.phone.set()
+
+# ==================== УНИВЕРСАЛЬНЫЙ КОНТАКТ ====================
 @dp.message_handler(content_types=types.ContentType.CONTACT, state="*")
-async def process_contact(message: types.Message, state: FSMContext):
+async def any_contact(message: types.Message, state: FSMContext):
     phone = message.contact.phone_number
     data = await state.get_data()
-    current = await state.get_state()
+    state_name = await state.get_state()
 
-    if "FormLead" in str(current):
-        text = f"📝 <b>Новая заявка</b>\n👤 Имя: {data.get('name')}\n📞 Телефон: {phone}"
+    if state_name == "FormLead:phone":
+        text = f"📝 <b>Новая заявка</b>\n👤 Имя: {data['name']}\n📞 Телефон: {phone}"
 
-    elif "QuizBuild" in str(current):
+    elif "QuizBuild" in state_name:
         text = (
             f"📋 <b>Анкета — Расчёт стоимости дома</b>\n\n"
             f"🏠 Этажность: {data.get('q1')}\n"
@@ -210,27 +171,31 @@ async def process_contact(message: types.Message, state: FSMContext):
             f"📞 Телефон: {phone}"
         )
 
-    elif "QuizProject" in str(current):
-        text = format_quiz(data, "Архитектурное проектирование", phone)
+    elif "QuizProject" in state_name:
+        text = (
+            f"📋 <b>Анкета — Архитектурное проектирование</b>\n\n"
+            f"🧱 Материал: {data.get('q1')}\n"
+            f"🏠 Этажность: {data.get('q2')}\n"
+            f"📐 Площадь: {data.get('q3')}\n"
+            f"📄 Эскиз: {data.get('q4')}\n"
+            f"🕒 Сроки: {data.get('q5')}\n"
+            f"📞 Телефон: {phone}"
+        )
 
     else:
-        text = f"📞 Новый контакт: {phone}"
+        text = f"📞 Получен контакт: {phone}"
 
     await bot.send_message(ADMIN_CHAT_ID, text)
     await message.answer("✅ Спасибо! Мы свяжемся с вами в ближайшее время.", reply_markup=main_menu())
     await state.finish()
 
-# =============================================
-# КВИЗ №1 — РАСЧЁТ СТОИМОСТИ ДОМА (100% РАБОЧИЙ)
-# =============================================
+# ==================== КВИЗ 1 — РАСЧЁТ СТОИМОСТИ ====================
 @dp.message_handler(lambda m: m.text == "🏗 Расчёт стоимости дома")
-async def quiz_build_intro(message: types.Message, state: FSMContext):
+async def quiz_build_start(message: types.Message, state: FSMContext):
     await state.finish()
 
-    photo_url = "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height"
-
     await message.answer_photo(
-        photo=photo_url,
+        "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height",
         caption=(
             "<b>🏗 Разработаем полный проект и 3D визуал вашего дома по СНиП</b>\n"
             "<b>от 400 руб/м² за 30 дней</b>\n\n"
@@ -246,92 +211,108 @@ async def quiz_build_intro(message: types.Message, state: FSMContext):
         "Это займёт меньше минуты ⏱"
     )
 
-    kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("➡️ Рассчитать стоимость дома", callback_data="start_quiz_build"))
+    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("➡️ Рассчитать стоимость дома", callback_data="qb_start"))
     await message.answer("Готовы начать?", reply_markup=kb)
 
-@dp.callback_query_handler(lambda c: c.data == "start_quiz_build")
+@dp.callback_query_handler(lambda c: c.data == "qb_start")
 async def qb_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.finish()
+    await state.set_state(QuizBuild.waiting)
     await state.update_data(q1=None, q2=None, q3=None, q4=None, q5=None)
-    await QuizBuild.waiting.set()
 
     await call.message.edit_text(
         "🏗 Вопрос 1: Сколько этажей будет в доме?",
-        reply_markup=build_keyboard(["1 этаж", "С мансардой", "2 этажа"])
+        reply_markup=ikb([
+            ("1 этаж", "qb_f1"),
+            ("С мансардой", "qb_fm"),
+            ("2 этажа", "qb_f2")
+        ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["1 этаж", "С мансардой", "2 этажа"], state=QuizBuild.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qb_f"), state=QuizBuild.waiting)
 async def qb_q2(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q1=call.data)
+    map_f = {"qb_f1": "1 этаж", "qb_fm": "С мансардой", "qb_f2": "2 этажа"}
+    await state.update_data(q1=map_f[call.data])
+
     await call.message.edit_text(
         "Вопрос 2: Из какого материала планируете строить дом?",
-        reply_markup=build_keyboard([
-            "Кирпич", "Каркас / Брус", "Газобетон / Монолит",
-            "Пока не определился, нужна консультация"
+        reply_markup=ikb([
+            ("Кирпич", "qb_m1"),
+            ("Каркас / Брус", "qb_m2"),
+            ("Газобетон / Монолит", "qb_m3"),
+            ("Пока не определился, нужна консультация", "qb_m4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["Кирпич", "Каркас / Брус", "Газобетон / Монолит", "Пока не определился, нужна консультация"], state=QuizBuild.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qb_m"), state=QuizBuild.waiting)
 async def qb_q3(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q2=call.data)
+    map_m = {"qb_m1": "Кирпич", "qb_m2": "Каркас / Брус", "qb_m3": "Газобетон / Монолит", "qb_m4": "Пока не определился, нужна консультация"}
+    await state.update_data(q2=map_m[call.data])
+
     await call.message.edit_text(
         "Вопрос 3: Какую общую площадь Вы рассматриваете?",
-        reply_markup=build_keyboard(["до 100 м²", "100–150 м²", "150–200 м²", "Больше 200 м²"])
+        reply_markup=ikb([
+            ("до 100 м²", "qb_a1"),
+            ("100–150 м²", "qb_a2"),
+            ("150–200 м²", "qb_a3"),
+            ("Больше 200 м²", "qb_a4")
+        ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["до 100 м²", "100–150 м²", "150–200 м²", "Больше 200 м²"], state=QuizBuild.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qb_a"), state=QuizBuild.waiting)
 async def qb_q4(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q3=call.data)
+    map_a = {"qb_a1": "до 100 м²", "qb_a2": "100–150 м²", "qb_a3": "150–200 м²", "qb_a4": "Больше 200 м²"}
+    await state.update_data(q3=map_a[call.data])
+
     await call.message.edit_text(
         "Вопрос 4: У Вас есть проект, который нравится?",
-        reply_markup=build_keyboard([
-            "Есть готовый проект",
-            "Есть картинка, рисунок, чертеч",
-            "Выберу из каталога",
-            "Хочу индивидуальный проект (для Вас бесплатно)"
+        reply_markup=ikb([
+            ("Есть готовый проект", "qb_p1"),
+            ("Есть картинка, рисунок, чертеж", "qb_p2"),
+            ("Выберу из каталога", "qb_p3"),
+            ("Хочу индивидуальный проект (для Вас бесплатно)", "qb_p4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["Есть готовый проект", "Есть картинка, рисунок, чертеч", "Выберу из каталога", "Хочу индивидуальный проект (для Вас бесплатно)"], state=QuizBuild.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qb_p"), state=QuizBuild.waiting)
 async def qb_q5(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q4=call.data)
+    map_p = {"qb_p1": "Есть готовый проект", "qb_p2": "Есть картинка, рисунок, чертеж", "qb_p3": "Выберу из каталога", "qb_p4": "Хочу индивидуальный проект (для Вас бесплатно)"}
+    await state.update_data(q4=map_p[call.data])
+
     await call.message.edit_text(
         "Вопрос 5: Когда Вы планируете строительство?",
-        reply_markup=build_keyboard([
-            "В ближайшее время",
-            "Через 1–3 месяца",
-            "Через 3–6 месяцев",
-            "Не знаю, нужна консультация"
+        reply_markup=ikb([
+            ("В ближайшее время", "qb_t1"),
+            ("Через 1–3 месяца", "qb_t2"),
+            ("Через 3–6 месяцев", "qb_t3"),
+            ("Не знаю, нужна консультация", "qb_t4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["В ближайшее время", "Через 1–3 месяца", "Через 3–6 месяцев", "Не знаю, нужна консультация"], state=QuizBuild.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qb_t"), state=QuizBuild.waiting)
 async def qb_phone(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q5=call.data)
+    map_t = {"qb_t1": "В ближайшее время", "qb_t2": "Через 1–3 месяца", "qb_t3": "Через 3–6 месяцев", "qb_t4": "Не знаю, нужна консультация"}
+    await state.update_data(q5=map_t[call.data])
     await QuizBuild.phone.set()
     await call.message.edit_text("📲 Оставьте телефон — мы подготовим расчёт стоимости и свяжемся с вами:")
     await call.message.edit_reply_markup(reply_markup=phone_kb())
 
-# =============================================
-# КВИЗ №2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ (100% РАБОЧИЙ)
-# =============================================
+# ==================== КВИЗ 2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ ====================
+# (по аналогии — коды qp_*)
+
 @dp.message_handler(lambda m: m.text == "✏️ Архитектурное проектирование")
-async def quiz_project_intro(message: types.Message, state: FSMContext):
+async def quiz_project_start(message: types.Message, state: FSMContext):
     await state.finish()
 
     await message.answer_photo(
-        photo="https://ovikv.ru/new/img/podho_130325114/16.jpg",
+        "https://ovikv.ru/new/img/podho_130325114/16.jpg",
         caption="📐 <b>Архитектурное проектирование</b>"
     )
-
-    await bot.send_chat_action(message.chat.id, "typing")
     await asyncio.sleep(1.3)
 
     await message.answer(
@@ -342,92 +323,104 @@ async def quiz_project_intro(message: types.Message, state: FSMContext):
         "Чтобы рассчитать стоимость проектирования и подготовить персональное предложение — "
         "ответьте, пожалуйста, на несколько коротких вопросов. Это займёт меньше минуты ⏱"
     )
-
-    await bot.send_chat_action(message.chat.id, "typing")
     await asyncio.sleep(1)
 
-    kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("📐 Рассчитать стоимость проекта", callback_data="start_quiz_project"))
+    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("📐 Рассчитать стоимость проекта", callback_data="qp_start"))
     await message.answer("Готовы начать?", reply_markup=kb)
 
-@dp.callback_query_handler(lambda c: c.data == "start_quiz_project")
+@dp.callback_query_handler(lambda c: c.data == "qp_start")
 async def qp_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.finish()
+    await state.set_state(QuizProject.waiting)
     await state.update_data(q1=None, q2=None, q3=None, q4=None, q5=None)
-    await QuizProject.waiting.set()
 
     await call.message.edit_text(
         "✏️ Вопрос 1: Из какого материала планируете строить?",
-        reply_markup=build_keyboard([
-            "Кирпич", "Каркас / Брус", "Газобетон / Монолит",
-            "Пока не определился, нужна консультация"
+        reply_markup=ikb([
+            ("Кирпич", "qp_m1"),
+            ("Каркас / Брус", "qp_m2"),
+            ("Газобетон / Монолит", "qp_m3"),
+            ("Пока не определился, нужна консультация", "qp_m4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["Кирпич", "Каркас / Брус", "Газобетон / Монолит", "Пока не определился, нужна консультация"], state=QuizProject.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qp_m"), state=QuizProject.waiting)
 async def qp_q2(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q1=call.data)
+    map_m = {"qp_m1": "Кирпич", "qp_m2": "Каркас / Брус", "qp_m3": "Газобетон / Монолит", "qp_m4": "Пока не определился, нужна консультация"}
+    await state.update_data(q1=map_m[call.data])
+
     await call.message.edit_text(
         "Вопрос 2: Сколько этажей будет в доме?",
-        reply_markup=build_keyboard(["1 этаж", "2 этажа", "3 этажа", "Другое"])
+        reply_markup=ikb([
+            ("1 этаж", "qp_f1"),
+            ("2 этажа", "qp_f2"),
+            ("3 этажа", "qp_f3"),
+            ("Другое", "qp_f4")
+        ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["1 этаж", "2 этажа", "3 этажа", "Другое"], state=QuizProject.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qp_f"), state=QuizProject.waiting)
 async def qp_q3(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q2=call.data)
+    map_f = {"qp_f1": "1 этаж", "qp_f2": "2 этажа", "qp_f3": "3 этажа", "qp_f4": "Другое"}
+    await state.update_data(q2=map_f[call.data])
+
     await call.message.edit_text(
         "Вопрос 3: Какую общую площадь вы рассматриваете?",
-        reply_markup=build_keyboard(["до 150 м²", "до 250 м²", "до 500 м²", "Более 500 м²"])
+        reply_markup=ikb([
+            ("до 150 м²", "qp_a1"),
+            ("до 250 м²", "qp_a2"),
+            ("до 500 м²", "qp_a3"),
+            ("Более 500 м²", "qp_a4")
+        ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["до 150 м²", "до 250 м²", "до 500 м²", "Более 500 м²"], state=QuizProject.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qp_a"), state=QuizProject.waiting)
 async def qp_q4(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q3=call.data)
+    map_a = {"qp_a1": "до 150 м²", "qp_a2": "до 250 м²", "qp_a3": "до 500 м²", "qp_a4": "Более 500 м²"}
+    await state.update_data(q3=map_a[call.data])
+
     await call.message.edit_text(
         "Есть ли у вас эскиз-проект, который нравится?",
-        reply_markup=build_keyboard([
-            "Да, есть проект, который нравится",
-            "Есть картинка, рисунок, фото, которые нравятся",
-            "Выберу из каталога",
-            "Нет"
+        reply_markup=ikb([
+            ("Да, есть проект, который нравится", "qp_p1"),
+            ("Есть картинка, рисунок, фото, которые нравятся", "qp_p2"),
+            ("Выберу из каталога", "qp_p3"),
+            ("Нет", "qp_p4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["Да, есть проект, который нравится", "Есть картинка, рисунок, фото, которые нравятся", "Выберу из каталога", "Нет"], state=QuizProject.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qp_p"), state=QuizProject.waiting)
 async def qp_q5(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q4=call.data)
+    map_p = {"qp_p1": "Да, есть проект, который нравится", "qp_p2": "Есть картинка, рисунок, фото, которые нравятся", "qp_p3": "Выберу из каталога", "qp_p4": "Нет"}
+    await state.update_data(q4=map_p[call.data])
+
     await call.message.edit_text(
         "Когда вы планируете строительство?",
-        reply_markup=build_keyboard([
-            "В ближайшее время",
-            "Через 1–3 месяца",
-            "Через 3–6 месяцев",
-            "Не знаю, нужна консультация"
+        reply_markup=ikb([
+            ("В ближайшее время", "qp_t1"),
+            ("Через 1–3 месяца", "qp_t2"),
+            ("Через 3–6 месяцев", "qp_t3"),
+            ("Не знаю, нужна консультация", "qp_t4")
         ])
     )
 
-@dp.callback_query_handler(lambda c: c.data in ["В ближайшее время", "Через 1–3 месяца", "Через 3–6 месяцев", "Не знаю, нужна консультация"], state=QuizProject.waiting)
+@dp.callback_query_handler(lambda c: c.data.startswith("qp_t"), state=QuizProject.waiting)
 async def qp_phone(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.update_data(q5=call.data)
+    map_t = {"qp_t1": "В ближайшее время", "qp_t2": "Через 1–3 месяца", "qp_t3": "Через 3–6 месяцев", "qp_t4": "Не знаю, нужна консультация"}
+    await state.update_data(q5=map_t[call.data])
     await QuizProject.phone.set()
     await call.message.edit_text("📲 Оставьте ваш телефон для связи:")
     await call.message.edit_reply_markup(reply_markup=phone_kb())
 
-# =============================================
-# ЗАПУСК
-# =============================================
-async def on_startup(dp):
+# ==================== ЗАПУСК ====================
+async def on_startup(_):
     await bot.delete_webhook(drop_pending_updates=True)
-    try:
-        await bot.send_message(ADMIN_CHAT_ID, "✅ Бот СК «Вместе» запущен (long polling).")
-    except Exception as e:
-        logging.warning(f"Не удалось отправить сообщение админу: {e}")
+    await bot.send_message(ADMIN_CHAT_ID, "✅ Бот СК «Вместе» запущен и готов к работе!")
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
