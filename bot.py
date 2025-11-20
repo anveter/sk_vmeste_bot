@@ -236,41 +236,38 @@ def format_quiz(data, name, phone):
         f"📞 Телефон: {phone}"
     )
 
-# # ======================================================
-# КВИЗ №1 — РАСЧЁТ СТОИМОСТИ ДОМА
-# ======================================================
+# -------------------------------------------------------
+# КВИЗ №1 — РАСЧЁТ СТОИМОСТИ ДОМА (СТАБИЛЬНАЯ ВЕРСИЯ)
+# -------------------------------------------------------
 
 @dp.message_handler(lambda m: m.text == "🏗 Расчёт стоимости дома")
 async def quiz_build_intro(message: types.Message, state: FSMContext):
     await state.finish()
 
-    # 1) Отправляем фото
-    await message.answer_photo(
-        photo="https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height",
-        caption=(
-            "<b>🏗 Разработаем полный проект и 3D-визуал дома по СНиП</b>\n"
-            "<b>от 400 руб/м² за 30 дней</b>"
-        )
-    )
-
-    # typing
-    await bot.send_chat_action(message.chat.id, "typing")
-    await asyncio.sleep(1.2)
-
-    # 2) Интро-текст под фото
-    await message.answer(
-        "💰 Поможем сэкономить <b>до 1 млн рублей</b> за счёт правильно подобранных материалов "
-        "и инженерных решений.\n\n"
-        "⏳ Срок выполнения — до 30 дней.\n"
-        "📐 Рассчитаем смету будущего строительства!\n\n"
-        "Ответьте на несколько уточняющих вопросов — это займёт меньше минуты ⏱"
-    )
-
-    # typing
+    # typing эффект
     await bot.send_chat_action(message.chat.id, "typing")
     await asyncio.sleep(1)
 
-    # 3) Кнопка “Рассчитать стоимость дома”
+    # Фото перед квизом
+    photo_url = "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height"
+
+    await message.answer_photo(
+        photo=photo_url,
+        caption="<b>🏗 Разработаем полный проект и 3D визуал вашего дома по СНиП</b>\n"
+                "<b>от 400 руб/м² за 30 дней</b>\n\n"
+                "💰 Поможем сэкономить <b>до 1 млн рублей</b> за счёт правильно подобранных материалов "
+                "и инженерных решений.\n\n"
+                "⏳ Срок выполнения — до 30 дней.\n"
+                "📐 Рассчитаем смету будущего строительства!"
+    )
+
+    intro_text = (
+        "Чтобы рассчитать ориентировочную стоимость дома, ответьте на несколько уточняющих вопросов.\n"
+        "Это займёт меньше минуты ⏱"
+    )
+
+    await message.answer(intro_text)
+
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton("➡️ Рассчитать стоимость дома", callback_data="start_quiz_build"))
 
@@ -278,19 +275,21 @@ async def quiz_build_intro(message: types.Message, state: FSMContext):
 
 
 # -------------------------------------------------------
-# КНОПКА: НАЧАТЬ ОПРОС (Вопрос 1)
+# ВОПРОС 1 — ЭТАЖНОСТЬ
 # -------------------------------------------------------
 @dp.callback_query_handler(lambda c: c.data == "start_quiz_build")
-async def quiz_build_start(call: types.CallbackQuery, state: FSMContext):
+async def build_start(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
     await state.finish()
 
-    await call.message.edit_text("🏗 Вопрос 1: Сколько этажей будет в доме?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "1 этаж",
-        "С мансардой",
-        "2 этажа"
-    ]))
+    await call.message.answer(
+        "🏗 Вопрос 1: Сколько этажей будет в доме?",
+        reply_markup=build_keyboard([
+            "1 этаж",
+            "С мансардой",
+            "2 этажа"
+        ])
+    )
 
     await QuizBuild.q1.set()
 
@@ -299,17 +298,19 @@ async def quiz_build_start(call: types.CallbackQuery, state: FSMContext):
 # ВОПРОС 2 — МАТЕРИАЛ
 # -------------------------------------------------------
 @dp.callback_query_handler(state=QuizBuild.q1)
-async def build_q1(call: types.CallbackQuery, state: FSMContext):
+async def build_q1(call, state):
     await call.answer()
     await state.update_data(q1=call.data)
 
-    await call.message.edit_text("Вопрос 2: Из какого материала планируете строить дом?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "Кирпич",
-        "Каркас / Брус",
-        "Газобетон / Монолит",
-        "Пока не определился, нужна консультация"
-    ]))
+    await call.message.answer(
+        "Вопрос 2: Из какого материала планируете строить дом?",
+        reply_markup=build_keyboard([
+            "Кирпич",
+            "Каркас / Брус",
+            "Газобетон / Монолит",
+            "Пока не определился, нужна консультация"
+        ])
+    )
 
     await QuizBuild.q2.set()
 
@@ -318,17 +319,19 @@ async def build_q1(call: types.CallbackQuery, state: FSMContext):
 # ВОПРОС 3 — ПЛОЩАДЬ
 # -------------------------------------------------------
 @dp.callback_query_handler(state=QuizBuild.q2)
-async def build_q2(call: types.CallbackQuery, state: FSMContext):
+async def build_q2(call, state):
     await call.answer()
     await state.update_data(q2=call.data)
 
-    await call.message.edit_text("Вопрос 3: Какую общую площадь Вы рассматриваете?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "до 100 м²",
-        "100–150 м²",
-        "150–200 м²",
-        "Больше 200 м²"
-    ]))
+    await call.message.answer(
+        "Вопрос 3: Какую общую площадь Вы рассматриваете?",
+        reply_markup=build_keyboard([
+            "до 100 м²",
+            "100–150 м²",
+            "150–200 м²",
+            "Больше 200 м²"
+        ])
+    )
 
     await QuizBuild.q3.set()
 
@@ -337,17 +340,19 @@ async def build_q2(call: types.CallbackQuery, state: FSMContext):
 # ВОПРОС 4 — ПРОЕКТ
 # -------------------------------------------------------
 @dp.callback_query_handler(state=QuizBuild.q3)
-async def build_q3(call: types.CallbackQuery, state: FSMContext):
+async def build_q3(call, state):
     await call.answer()
     await state.update_data(q3=call.data)
 
-    await call.message.edit_text("Вопрос 4: У Вас есть проект, который нравится?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "Есть готовый проект",
-        "Есть картинка, рисунок, чертеж",
-        "Выберу из каталога",
-        "Хочу индивидуальный проект (для Вас бесплатно)"
-    ]))
+    await call.message.answer(
+        "Вопрос 4: У Вас есть проект, который нравится?",
+        reply_markup=build_keyboard([
+            "Есть готовый проект",
+            "Есть картинка, рисунок, чертеж",
+            "Выберу из каталога",
+            "Хочу индивидуальный проект (для Вас бесплатно)"
+        ])
+    )
 
     await QuizBuild.q4.set()
 
@@ -356,26 +361,28 @@ async def build_q3(call: types.CallbackQuery, state: FSMContext):
 # ВОПРОС 5 — СРОКИ
 # -------------------------------------------------------
 @dp.callback_query_handler(state=QuizBuild.q4)
-async def build_q4(call: types.CallbackQuery, state: FSMContext):
+async def build_q4(call, state):
     await call.answer()
     await state.update_data(q4=call.data)
 
-    await call.message.edit_text("Вопрос 5: Когда Вы планируете строительство?")
-    await call.message.edit_reply_markup(build_keyboard([
-        "В ближайшее время",
-        "Через 1–3 месяца",
-        "Через 3–6 месяцев",
-        "Не знаю, нужна консультация"
-    ]))
+    await call.message.answer(
+        "Вопрос 5: Когда Вы планируете строительство?",
+        reply_markup=build_keyboard([
+            "В ближайшее время",
+            "Через 1–3 месяца",
+            "Через 3–6 месяцев",
+            "Не знаю, нужна консультация"
+        ])
+    )
 
     await QuizBuild.q5.set()
 
 
 # -------------------------------------------------------
-# ФИНАЛ — ТЕЛЕФОН
+# ЗАПРОС ТЕЛЕФОНА
 # -------------------------------------------------------
 @dp.callback_query_handler(state=QuizBuild.q5)
-async def build_q5(call: types.CallbackQuery, state: FSMContext):
+async def build_q5(call, state):
     await call.answer()
     await state.update_data(q5=call.data)
 
@@ -388,16 +395,22 @@ async def build_q5(call: types.CallbackQuery, state: FSMContext):
 
 
 # -------------------------------------------------------
-# ОТПРАВКА АДМИНУ
+# ФИНАЛ — ОТПРАВКА АДМИНУ
 # -------------------------------------------------------
 @dp.message_handler(content_types=types.ContentTypes.CONTACT, state=QuizBuild.phone)
-async def build_finish(message: types.Message, state: FSMContext):
+async def build_finish(message, state):
     phone = message.contact.phone_number
     data = await state.get_data()
 
     await bot.send_message(
         ADMIN_CHAT_ID,
-        format_quiz(data, "Расчёт стоимости дома", phone)
+        f"📋 <b>Анкета — Расчёт стоимости дома</b>\n\n"
+        f"🏠 Этажность: {data.get('q1')}\n"
+        f"🧱 Материал: {data.get('q2')}\n"
+        f"📐 Площадь: {data.get('q3')}\n"
+        f"📄 Проект: {data.get('q4')}\n"
+        f"🕒 Сроки: {data.get('q5')}\n"
+        f"📞 Телефон: {phone}"
     )
 
     await message.answer(
