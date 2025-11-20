@@ -318,120 +318,134 @@ async def qb_phone(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_reply_markup(reply_markup=phone_kb())
 
 # ==================== КВИЗ 2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ ====================
-# (по аналогии — коды qp_*)
 
 @dp.message_handler(lambda m: m.text == "✏️ Архитектурное проектирование")
 async def quiz_project_start(message: types.Message, state: FSMContext):
     await state.finish()
+    await state.update_data(quiz="project")  # помечаем тип квиза
 
-    await message.answer_photo(
-        "https://ovikv.ru/new/img/podho_130325114/16.jpg",
-        caption="📐 <b>Архитектурное проектирование</b>"
-    )
-    await asyncio.sleep(1.3)
-
-    await message.answer(
-        "<b>🏗 Разработаем полный проект и 3D-визуал вашего дома по СНиП</b>\n"
-        "<b>💰 Стоимость от 400 руб/м² · Срок — до 30 дней</b>\n\n"
+    full_text = (
+        "<b>Разработаем полный проект и 3D-визуал вашего дома по СНиП</b>\n"
+        "<b>Стоимость от 400 руб/м² · Срок — до 30 дней</b>\n\n"
         "Мы поможем вам сэкономить <b>до 1 млн рублей</b> за счёт правильного подбора "
         "материалов, инженерных решений и грамотной структуры проекта.\n\n"
         "Чтобы рассчитать стоимость проектирования и подготовить персональное предложение — "
         "ответьте, пожалуйста, на несколько коротких вопросов. Это займёт меньше минуты ⏱"
     )
-    await asyncio.sleep(1)
 
-    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("📐 Рассчитать стоимость проекта", callback_data="qp_start"))
-    await message.answer("Готовы начать?", reply_markup=kb)
+    await message.answer_photo(
+        photo="https://ovikv.ru/new/img/podho_130325114/16.jpg",  # твоя ссылка
+        caption=full_text,
+        reply_markup=InlineKeyboardMarkup().add(
+            InlineKeyboardButton("Рассчитать стоимость проекта", callback_data="qp_start")
+        ),
+        parse_mode="HTML"
+    )
 
+# Вопрос 1 — Материал
 @dp.callback_query_handler(lambda c: c.data == "qp_start")
 async def qp_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await state.set_state(QuizProject.waiting)
-    await state.update_data(q1=None, q2=None, q3=None, q4=None, q5=None)
-
-    await call.message.edit_text(
-        "✏️ Вопрос 1: Из какого материала планируете строить?",
+    await call.message.edit_caption(
+        caption="Вопрос 1 из 5\n\nИз какого материала планируете строить?",
         reply_markup=ikb([
-            ("Кирпич", "qp_m1"),
-            ("Каркас / Брус", "qp_m2"),
-            ("Газобетон / Монолит", "qp_m3"),
-            ("Пока не определился, нужна консультация", "qp_m4")
-        ])
+            ("Кирпич",                           "qp1_1"),
+            ("Каркас / Брус",                    "qp1_2"),
+            ("Газобетон / Монолит",              "qp1_3"),
+            ("Пока не определился, нужна консультация", "qp1_4")
+        ]),
+        parse_mode="HTML"
     )
 
-@dp.callback_query_handler(lambda c: c.data.startswith("qp_m"), state=QuizProject.waiting)
+# Вопрос 2 — Этажность
+@dp.callback_query_handler(lambda c: c.data.startswith("qp1_"))
 async def qp_q2(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    map_m = {"qp_m1": "Кирпич", "qp_m2": "Каркас / Брус", "qp_m3": "Газобетон / Монолит", "qp_m4": "Пока не определился, нужна консультация"}
-    await state.update_data(q1=map_m[call.data])
+    mapping = {"qp1_1": "Кирпич", "qp1_2": "Каркас / Брус", "qp1_3": "Газобетон / Монолит", "qp1_4": "Пока не определился, нужна консультация"}
+    await state.update_data(q1=mapping[call.data])
 
-    await call.message.edit_text(
-        "Вопрос 2: Сколько этажей будет в доме?",
+    await call.message.edit_caption(
+        caption="Вопрос 2 из 5\n\nСколько этажей будет в доме?",
         reply_markup=ikb([
-            ("1 этаж", "qp_f1"),
-            ("2 этажа", "qp_f2"),
-            ("3 этажа", "qp_f3"),
-            ("Другое", "qp_f4")
-        ])
+            ("1 этаж",   "qp2_1"),
+            ("2 этажа",  "qp2_2"),
+            ("3 этажа",  "qp2_3"),
+            ("Другое",   "qp2_4")
+        ]),
+        parse_mode="HTML"
     )
 
-@dp.callback_query_handler(lambda c: c.data.startswith("qp_f"), state=QuizProject.waiting)
+# Вопрос 3 — Площадь
+@dp.callback_query_handler(lambda c: c.data.startswith("qp2_"))
 async def qp_q3(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    map_f = {"qp_f1": "1 этаж", "qp_f2": "2 этажа", "qp_f3": "3 этажа", "qp_f4": "Другое"}
-    await state.update_data(q2=map_f[call.data])
+    mapping = {"qp2_1": "1 этаж", "qp2_2": "2 этажа", "qp2_3": "3 этажа", "qp2_4": "Другое"}
+    await state.update_data(q2=mapping[call.data])
 
-    await call.message.edit_text(
-        "Вопрос 3: Какую общую площадь вы рассматриваете?",
+    await call.message.edit_caption(
+        caption="Вопрос 3 из 5\n\nКакую общую площадь вы рассматриваете?",
         reply_markup=ikb([
-            ("до 150 м²", "qp_a1"),
-            ("до 250 м²", "qp_a2"),
-            ("до 500 м²", "qp_a3"),
-            ("Более 500 м²", "qp_a4")
-        ])
+            ("до 150 м²",     "qp3_1"),
+            ("до 250 м²",     "qp3_2"),
+            ("до 500 м²",     "qp3_3"),
+            ("Более 500 м²",  "qp3_4")
+        ]),
+        parse_mode="HTML"
     )
 
-@dp.callback_query_handler(lambda c: c.data.startswith("qp_a"), state=QuizProject.waiting)
+# Вопрос 4 — Эскиз
+@dp.callback_query_handler(lambda c: c.data.startswith("qp3_"))
 async def qp_q4(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    map_a = {"qp_a1": "до 150 м²", "qp_a2": "до 250 м²", "qp_a3": "до 500 м²", "qp_a4": "Более 500 м²"}
-    await state.update_data(q3=map_a[call.data])
+    mapping = {"qp3_1": "до 150 м²", "qp3_2": "до 250 м²", "qp3_3": "до 500 м²", "qp3_4": "Более 500 м²"}
+    await state.update_data(q3=mapping[call.data])
 
-    await call.message.edit_text(
-        "Есть ли у вас эскиз-проект, который нравится?",
+    await call.message.edit_caption(
+        caption="Вопрос 4 из 5\n\nЕсть ли у вас эскиз-проект, который нравится?",
         reply_markup=ikb([
-            ("Да, есть проект, который нравится", "qp_p1"),
-            ("Есть картинка, рисунок, фото, которые нравятся", "qp_p2"),
-            ("Выберу из каталога", "qp_p3"),
-            ("Нет", "qp_p4")
-        ])
+            ("Да, есть проект, который нравится",                 "qp4_1"),
+            ("Есть картинка, рисунок, фото, которые нравятся",         "qp4_2"),
+            ("Выберу из каталога",                                "qp4_3"),
+            ("Нет",                                               "qp4_4")
+        ]),
+        parse_mode="HTML"
     )
 
-@dp.callback_query_handler(lambda c: c.data.startswith("qp_p"), state=QuizProject.waiting)
+# Вопрос 5 — Сроки
+@dp.callback_query_handler(lambda c: c.data.startswith("qp4_"))
 async def qp_q5(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    map_p = {"qp_p1": "Да, есть проект, который нравится", "qp_p2": "Есть картинка, рисунок, фото, которые нравятся", "qp_p3": "Выберу из каталога", "qp_p4": "Нет"}
-    await state.update_data(q4=map_p[call.data])
+    mapping = {
+        "qp4_1": "Да, есть проект, который нравится",
+        "qp4_2": "Есть картинка, рисунок, фото, которые нравятся",
+        "qp4_3": "Выберу из каталога",
+        "qp4_4": "Нет"
+    }
+    await state.update_data(q4=mapping[call.data])
 
-    await call.message.edit_text(
-        "Когда вы планируете строительство?",
+    await call.message.edit_caption(
+        caption="Вопрос 5 из 5\n\nКогда вы планируете строительство?",
         reply_markup=ikb([
-            ("В ближайшее время", "qp_t1"),
-            ("Через 1–3 месяца", "qp_t2"),
-            ("Через 3–6 месяцев", "qp_t3"),
-            ("Не знаю, нужна консультация", "qp_t4")
-        ])
+            ("В ближайшее время",         "qp5_1"),
+            ("Через 1–3 месяца",          "qp5_2"),
+            ("Через 3–6 месяцев",         "qp5_3"),
+            ("Не знаю, нужна консультация","qp5_4")
+        ]),
+        parse_mode="HTML"
     )
 
-@dp.callback_query_handler(lambda c: c.data.startswith("qp_t"), state=QuizProject.waiting)
+# Телефон
+@dp.callback_query_handler(lambda c: c.data.startswith("qp5_"))
 async def qp_phone(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    map_t = {"qp_t1": "В ближайшее время", "qp_t2": "Через 1–3 месяца", "qp_t3": "Через 3–6 месяцев", "qp_t4": "Не знаю, нужна консультация"}
-    await state.update_data(q5=map_t[call.data])
-    await QuizProject.phone.set()
-    await call.message.edit_text("📲 Оставьте ваш телефон для связи:")
-    await call.message.edit_reply_markup(reply_markup=phone_kb())
+    mapping = {"qp5_1": "В ближайшее время", "qp5_2": "Через 1–3 месяца", "qp5_3": "Через 3–6 месяцев", "qp5_4": "Не знаю, нужна консультация"}
+    await state.update_data(q5=mapping[call.data])
 
+    await call.message.edit_caption(
+        caption="Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
+        parse_mode="HTML"
+    )
+    await call.message.edit_reply_markup(reply_markup=phone_kb())
 # ==================== ЗАПУСК ====================
 async def on_startup(_):
     await bot.delete_webhook(drop_pending_updates=True)
