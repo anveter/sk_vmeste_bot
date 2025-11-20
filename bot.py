@@ -403,7 +403,7 @@ async def quiz_project_intro(message: types.Message, state: FSMContext):
 
     # 1) Фото (можешь заменить ссылку на своё)
     await message.answer_photo(
-        photo="https://i.imgur.com/FkZyPml.jpeg",
+        photo="https://ovikv.ru/new/img/podho_130325114/16.jpg",
         caption="📐 <b>Архитектурное проектирование</b>"
     )
 
