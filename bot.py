@@ -1,7 +1,8 @@
 import logging
 import os
 
-from aiogram import Bot, Dispatcher, executor, types
+from aiohttp import web
+from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -11,9 +12,17 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+WEBHOOK_BASE = os.getenv("WEBHOOK_BASE_URL") or os.getenv("WEBHOOK_URL") or os.getenv("WEB_APP_URL")
 
 if not BOT_TOKEN or not ADMIN_CHAT_ID:
     raise RuntimeError("BOT_TOKEN и ADMIN_CHAT_ID обязательны!")
+
+if not WEBHOOK_BASE:
+    raise RuntimeError("WEBHOOK_BASE_URL или WEBHOOK_URL обязательны для вебхука!")
+
+PORT = int(os.getenv("PORT", 8080))
+WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
+WEBHOOK_URL = f"{WEBHOOK_BASE.rstrip('/')}{WEBHOOK_PATH}"
 
 bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
 storage = MemoryStorage()
@@ -293,7 +302,7 @@ async def _qb_send_q5(call: types.CallbackQuery, state: FSMContext):
         "qb4_1": "Есть готовый проект",
         "qb4_2": "Есть картинка, рисунок, чертеж",
         "qb4_3": "Выберу из каталога",
-        "qb4_4": "Хочу индивидуальный проект (для Вас бесплатно)",
+        "qb4_4": "Хочу индивидуальный проект (для Вас беспатно)",
     }
     await state.update_data(q4=answers[call.data])
     await QuizBuild.q5.set()
@@ -352,6 +361,7 @@ async def quiz_build_start(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda c: c.data == "qb_start", state="*")
 async def qb_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
+    await state.finish()
     await QuizBuild.q1.set()
     await _qb_send_q1(call.message)
 
@@ -494,7 +504,7 @@ async def _qp_request_phone(call: types.CallbackQuery, state: FSMContext):
     )
     await call.message.edit_reply_markup(reply_markup=None)
     await call.message.answer(
-        "Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
+        "Отлично! Остался последний шаг\n\nОставьте ваш телефон дя связи:",
         reply_markup=phone_kb(),
     )
 
@@ -524,6 +534,7 @@ async def quiz_project_start(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda c: c.data == "qp_start", state="*")
 async def qp_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
+    await state.finish()
     await QuizProject.q1.set()
     await _qp_send_q1(call)
 
@@ -558,14 +569,36 @@ async def qp_phone(call: types.CallbackQuery, state: FSMContext):
     await _qp_request_phone(call, state)
 
 
-# ==================== ЗАПУСК ====================
-async def on_startup(_):
-    await bot.delete_webhook(drop_pending_updates=True)
+# ==================== ВЕБХУК И ЗАПУСК ====================
+async def handle_webhook(request: web.Request) -> web.Response:
+    if request.match_info.get("token") != BOT_TOKEN:
+        return web.Response(status=403)
+
+    update_data = await request.json()
+    update = types.Update(**update_data)
+    await dp.process_update(update)
+    return web.Response(text="ok")
+
+
+async def on_startup(app: web.Application):
+    await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
     await bot.send_message(ADMIN_CHAT_ID, "✅ Бот СК «Вместе» запущен и готов к работе!")
 
 
+async def on_shutdown(app: web.Application):
+    await bot.delete_webhook()
+    await dp.storage.close()
+    await dp.storage.wait_closed()
+    await bot.session.close()
+
+
 def main():
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    app = web.Application()
+    app.router.add_post(WEBHOOK_PATH, handle_webhook)
+    app.router.add_get("/", lambda _: web.Response(text="OK"))
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    web.run_app(app, host="0.0.0.0", port=PORT)
 
 
 if __name__ == "__main__":
