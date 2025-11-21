@@ -5,8 +5,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,7 +21,7 @@ dp = Dispatcher(bot, storage=storage)
 
 
 # ==================== КЛАВИАТУРЫ ====================
-def main_menu():
+def main_menu() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row("📋 О компании", "📁 Каталог проектов")
     kb.row("🏗 Расчёт стоимости дома", "✏️ Архитектурное проектирование")
@@ -30,15 +29,14 @@ def main_menu():
     return kb
 
 
-def phone_kb():
+def phone_kb() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     kb.add(KeyboardButton("📱 Отправить телефон", request_contact=True))
     kb.add(KeyboardButton("Отправлю позже"))
     return kb
 
 
-# Новый build_keyboard с кодами (текст, код)
-def ikb(options):
+def ikb(options) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     for text, code in options:
         kb.add(InlineKeyboardButton(text, callback_data=code))
@@ -83,7 +81,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     )
 
 
-# ==================== ОСТАЛЬНЫЕ РАЗДЕЛЫ (без изменений) ====================
+# ==================== ОСТАЛЬНЫЕ РАЗДЕЛЫ ====================
 @dp.message_handler(lambda m: m.text == "📋 О компании")
 async def about(message: types.Message):
     text = (
@@ -224,10 +222,112 @@ async def phone_text(message: types.Message, state: FSMContext):
 
 
 # ==================== КВИЗ 1 — РАСЧЁТ СТОИМОСТИ ДОМА ====================
+async def _qb_send_q1(message: types.Message):
+    await message.edit_text(
+        "Вопрос 1 из 5\n\n🏗 Сколько этажей будет в доме?",
+        reply_markup=ikb([
+            ("1 этаж", "qb1_1"),
+            ("С мансардой", "qb1_m"),
+            ("2 этажа", "qb1_2"),
+        ]),
+    )
+
+
+async def _qb_send_q2(call: types.CallbackQuery, state: FSMContext):
+    answers = {"qb1_1": "1 этаж", "qb1_m": "С мансардой", "qb1_2": "2 этажа"}
+    await state.update_data(q1=answers[call.data])
+    await QuizBuild.q2.set()
+    await call.message.edit_text(
+        "Вопрос 2 из 5\n\n🧱 Из какого материала планируете строить дом?",
+        reply_markup=ikb([
+            ("Кирпич", "qb2_1"),
+            ("Каркас / Брус", "qb2_2"),
+            ("Газобетон / Монолит", "qb2_3"),
+            ("Пока не определился, нужна консультация", "qb2_4"),
+        ]),
+    )
+
+
+async def _qb_send_q3(call: types.CallbackQuery, state: FSMContext):
+    answers = {
+        "qb2_1": "Кирпич",
+        "qb2_2": "Каркас / Брус",
+        "qb2_3": "Газобетон / Монолит",
+        "qb2_4": "Пока не определился, нужна консультация",
+    }
+    await state.update_data(q2=answers[call.data])
+    await QuizBuild.q3.set()
+    await call.message.edit_text(
+        "Вопрос 3 из 5\n\n📐 Какую общую площадь Вы рассматриваете?",
+        reply_markup=ikb([
+            ("до 100 м²", "qb3_1"),
+            ("100–150 м²", "qb3_2"),
+            ("150–200 м²", "qb3_3"),
+            ("Больше 200 м²", "qb3_4"),
+        ]),
+    )
+
+
+async def _qb_send_q4(call: types.CallbackQuery, state: FSMContext):
+    answers = {
+        "qb3_1": "до 100 м²",
+        "qb3_2": "100–150 м²",
+        "qb3_3": "150–200 м²",
+        "qb3_4": "Больше 200 м²",
+    }
+    await state.update_data(q3=answers[call.data])
+    await QuizBuild.q4.set()
+    await call.message.edit_text(
+        "Вопрос 4 из 5\n\n📄 У Вас есть проект, который нравится?",
+        reply_markup=ikb([
+            ("Есть готовый проект", "qb4_1"),
+            ("Есть картинка, рисунок, чертеж", "qb4_2"),
+            ("Выберу из каталога", "qb4_3"),
+            ("Хочу индивидуальный проект (для Вас бесплатно)", "qb4_4"),
+        ]),
+    )
+
+
+async def _qb_send_q5(call: types.CallbackQuery, state: FSMContext):
+    answers = {
+        "qb4_1": "Есть готовый проект",
+        "qb4_2": "Есть картинка, рисунок, чертеж",
+        "qb4_3": "Выберу из каталога",
+        "qb4_4": "Хочу индивидуальный проект (для Вас бесплатно)",
+    }
+    await state.update_data(q4=answers[call.data])
+    await QuizBuild.q5.set()
+    await call.message.edit_text(
+        "Вопрос 5 из 5\n\n🕒 Когда Вы планируете строительство?",
+        reply_markup=ikb([
+            ("В ближайшее время", "qb5_1"),
+            ("Через 1–3 месяца", "qb5_2"),
+            ("Через 3–6 месяцев", "qb5_3"),
+            ("Не знаю, нужна консультация", "qb5_4"),
+        ]),
+    )
+
+
+async def _qb_request_phone(call: types.CallbackQuery, state: FSMContext):
+    answers = {
+        "qb5_1": "В ближайшее время",
+        "qb5_2": "Через 1–3 месяца",
+        "qb5_3": "Через 3–6 месяцев",
+        "qb5_4": "Не знаю, нужна консультация",
+    }
+    await state.update_data(q5=answers[call.data])
+    await QuizBuild.phone.set()
+    await call.message.edit_text("Отлично! Остался последний шаг\n\n📲 Оставьте телефон — мы подготовим расчёт и свяжемся с вами:")
+    await call.message.edit_reply_markup(reply_markup=None)
+    await call.message.answer(
+        "Отлично! Остался последний шаг\n\n📲 Оставьте телефон — мы подготовим расчёт и свяжемся с вами:",
+        reply_markup=phone_kb(),
+    )
+
+
 @dp.message_handler(lambda message: message.text == "🏗 Расчёт стоимости дома")
 async def quiz_build_start(message: types.Message, state: FSMContext):
     await state.finish()
-
     await message.answer_photo(
         photo="https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height",
         caption="<b>🏗 Разработаем полный проект и 3D визуал вашего дома по СНиП</b>\n"
@@ -237,12 +337,10 @@ async def quiz_build_start(message: types.Message, state: FSMContext):
                 "⏳ Срок выполнения — до 30 дней.\n"
                 "📐 Рассчитаем смету будущего строительства!",
     )
-
     await message.answer(
         "Чтобы рассчитать ориентировочную стоимость дома, ответьте на несколько вопросов.\n"
         "Это займёт меньше минуты ⏱"
     )
-
     await message.answer(
         "Готовы начать?",
         reply_markup=InlineKeyboardMarkup().add(
@@ -255,125 +353,155 @@ async def quiz_build_start(message: types.Message, state: FSMContext):
 async def qb_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
     await QuizBuild.q1.set()
-    await call.message.edit_text(
-        "Вопрос 1 из 5\n\n🏗 Сколько этажей будет в доме?",
-        reply_markup=ikb([
-            ("1 этаж", "qb1_1"),
-            ("С мансардой", "qb1_m"),
-            ("2 этажа", "qb1_2"),
-        ]),
-    )
+    await _qb_send_q1(call.message)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qb1_"), state=QuizBuild.q1)
 async def qb_q2(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    answers = {"qb1_1": "1 этаж", "qb1_m": "С мансардой", "qb1_2": "2 этажа"}
-    await state.update_data(q1=answers[call.data])
-    await QuizBuild.q2.set()
-
-    await call.message.edit_text(
-        "Вопрос 2 из 5\n\n🧱 Из какого материала планируете строить дом?",
-        reply_markup=ikb([
-            ("Кирпич", "qb2_1"),
-            ("Каркас / Брус", "qb2_2"),
-            ("Газобетон / Монолит", "qb2_3"),
-            ("Пока не определился, нужна консультация", "qb2_4"),
-        ]),
-    )
+    await _qb_send_q2(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qb2_"), state=QuizBuild.q2)
 async def qb_q3(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    answers = {
-        "qb2_1": "Кирпич",
-        "qb2_2": "Каркас / Брус",
-        "qb2_3": "Газобетон / Монолит",
-        "qb2_4": "Пока не определился, нужна консультация",
-    }
-    await state.update_data(q2=answers[call.data])
-    await QuizBuild.q3.set()
-
-    await call.message.edit_text(
-        "Вопрос 3 из 5\n\n📐 Какую общую площадь Вы рассматриваете?",
-        reply_markup=ikb([
-            ("до 100 м²", "qb3_1"),
-            ("100–150 м²", "qb3_2"),
-            ("150–200 м²", "qb3_3"),
-            ("Больше 200 м²", "qb3_4"),
-        ]),
-    )
+    await _qb_send_q3(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qb3_"), state=QuizBuild.q3)
 async def qb_q4(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    answers = {
-        "qb3_1": "до 100 м²",
-        "qb3_2": "100–150 м²",
-        "qb3_3": "150–200 м²",
-        "qb3_4": "Больше 200 м²",
-    }
-    await state.update_data(q3=answers[call.data])
-    await QuizBuild.q4.set()
-
-    await call.message.edit_text(
-        "Вопрос 4 из 5\n\n📄 У Вас есть проект, который нравится?",
-        reply_markup=ikb([
-            ("Есть готовый проект", "qb4_1"),
-            ("Есть картинка, рисунок, чертеж", "qb4_2"),
-            ("Выберу из каталога", "qb4_3"),
-            ("Хочу индивидуальный проект (для Вас бесплатно)", "qb4_4"),
-        ]),
-    )
+    await _qb_send_q4(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qb4_"), state=QuizBuild.q4)
 async def qb_q5(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    answers = {
-        "qb4_1": "Есть готовый проект",
-        "qb4_2": "Есть картинка, рисунок, чертеж",
-        "qb4_3": "Выберу из каталога",
-        "qb4_4": "Хочу индивидуальный проект (для Вас бесплатно)",
-    }
-    await state.update_data(q4=answers[call.data])
-    await QuizBuild.q5.set()
-
-    await call.message.edit_text(
-        "Вопрос 5 из 5\n\n🕒 Когда Вы планируете строительство?",
-        reply_markup=ikb([
-            ("В ближайшее время", "qb5_1"),
-            ("Через 1–3 месяца", "qb5_2"),
-            ("Через 3–6 месяцев", "qb5_3"),
-            ("Не знаю, нужна консультация", "qb5_4"),
-        ]),
-    )
+    await _qb_send_q5(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qb5_"), state=QuizBuild.q5)
 async def qb_phone(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    answers = {
-        "qb5_1": "В ближайшее время",
-        "qb5_2": "Через 1–3 месяца",
-        "qb5_3": "Через 3–6 месяцев",
-        "qb5_4": "Не знаю, нужна консультация",
-    }
-    await state.update_data(q5=answers[call.data])
-    await QuizBuild.phone.set()
-
-    await call.message.edit_text("Отлично! Остался последний шаг\n\n📲 Оставьте телефон — мы подготовим расчёт и свяжемся с вами:")
-    await call.message.edit_reply_markup(reply_markup=None)
-    await call.message.answer("Отлично! Остался последний шаг\n\n📲 Оставьте телефон — мы подготовим расчёт и свяжемся с вами:", reply_markup=phone_kb())
+    await _qb_request_phone(call, state)
 
 
 # ==================== КВИЗ 2 — АРХИТЕКТУРНОЕ ПРОЕКТИРОВАНИЕ ====================
+async def _qp_send_q1(call: types.CallbackQuery):
+    await call.message.edit_caption(
+        caption="Вопрос 1 из 5\n\nИз какого материала планируете строить?",
+        reply_markup=ikb([
+            ("Кирпич", "qp1_1"),
+            ("Каркас / Брус", "qp1_2"),
+            ("Газобетон / Монолит", "qp1_3"),
+            ("Пока не определился, нужна консультация", "qp1_4"),
+        ]),
+        parse_mode="HTML",
+    )
+
+
+async def _qp_send_q2(call: types.CallbackQuery, state: FSMContext):
+    mapping = {
+        "qp1_1": "Кирпич",
+        "qp1_2": "Каркас / Брус",
+        "qp1_3": "Газобетон / Монолит",
+        "qp1_4": "Пока не определился, нужна консультация",
+    }
+    await state.update_data(q1=mapping[call.data])
+    await QuizProject.q2.set()
+    await call.message.edit_caption(
+        caption="Вопрос 2 из 5\n\nСколько этажей будет в доме?",
+        reply_markup=ikb([
+            ("1 этаж", "qp2_1"),
+            ("2 этажа", "qp2_2"),
+            ("3 этажа", "qp2_3"),
+            ("Другое", "qp2_4"),
+        ]),
+        parse_mode="HTML",
+    )
+
+
+async def _qp_send_q3(call: types.CallbackQuery, state: FSMContext):
+    mapping = {"qp2_1": "1 этаж", "qp2_2": "2 этажа", "qp2_3": "3 этажа", "qp2_4": "Другое"}
+    await state.update_data(q2=mapping[call.data])
+    await QuizProject.q3.set()
+    await call.message.edit_caption(
+        caption="Вопрос 3 из 5\n\nКакую общую площадь вы рассматриваете?",
+        reply_markup=ikb([
+            ("до 150 м²", "qp3_1"),
+            ("до 250 м²", "qp3_2"),
+            ("до 500 м²", "qp3_3"),
+            ("Более 500 м²", "qp3_4"),
+        ]),
+        parse_mode="HTML",
+    )
+
+
+async def _qp_send_q4(call: types.CallbackQuery, state: FSMContext):
+    mapping = {
+        "qp3_1": "до 150 м²",
+        "qp3_2": "до 250 м²",
+        "qp3_3": "до 500 м²",
+        "qp3_4": "Более 500 м²",
+    }
+    await state.update_data(q3=mapping[call.data])
+    await QuizProject.q4.set()
+    await call.message.edit_caption(
+        caption="Вопрос 4 из 5\n\nЕсть ли у вас эскиз-проект, который нравится?",
+        reply_markup=ikb([
+            ("Да, есть проект, который нравится", "qp4_1"),
+            ("Есть картинка, рисунок, фото, которые нравятся", "qp4_2"),
+            ("Выберу из каталога", "qp4_3"),
+            ("Нет", "qp4_4"),
+        ]),
+        parse_mode="HTML",
+    )
+
+
+async def _qp_send_q5(call: types.CallbackQuery, state: FSMContext):
+    mapping = {
+        "qp4_1": "Да, есть проект, который нравится",
+        "qp4_2": "Есть картинка, рисунок, фото, которые нравятся",
+        "qp4_3": "Выберу из каталога",
+        "qp4_4": "Нет",
+    }
+    await state.update_data(q4=mapping[call.data])
+    await QuizProject.q5.set()
+    await call.message.edit_caption(
+        caption="Вопрос 5 из 5\n\nКогда вы планируете строительство?",
+        reply_markup=ikb([
+            ("В ближайшее время", "qp5_1"),
+            ("Через 1–3 месяца", "qp5_2"),
+            ("Через 3–6 месяцев", "qp5_3"),
+            ("Не знаю, нужна консультация", "qp5_4"),
+        ]),
+        parse_mode="HTML",
+    )
+
+
+async def _qp_request_phone(call: types.CallbackQuery, state: FSMContext):
+    mapping = {
+        "qp5_1": "В ближайшее время",
+        "qp5_2": "Через 1–3 месяца",
+        "qp5_3": "Через 3–6 месяцев",
+        "qp5_4": "Не знаю, нужна консультация",
+    }
+    await state.update_data(q5=mapping[call.data])
+    await QuizProject.phone.set()
+    await call.message.edit_caption(
+        caption="Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
+        parse_mode="HTML",
+    )
+    await call.message.edit_reply_markup(reply_markup=None)
+    await call.message.answer(
+        "Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
+        reply_markup=phone_kb(),
+    )
+
+
 @dp.message_handler(lambda m: m.text == "✏️ Архитектурное проектирование")
 async def quiz_project_start(message: types.Message, state: FSMContext):
     await state.finish()
-
     full_text = (
         "<b>🏗 Разработаем полный проект и 3D-визуал вашего дома по СНиП</b>\n"
         "💰 <b>Стоимость от 400 руб/м² · Срок — до 30 дней</b>\n"
@@ -397,130 +525,37 @@ async def quiz_project_start(message: types.Message, state: FSMContext):
 async def qp_q1(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
     await QuizProject.q1.set()
-    await call.message.edit_caption(
-        caption="Вопрос 1 из 5\n\nИз какого материала планируете строить?",
-        reply_markup=ikb([
-            ("Кирпич", "qp1_1"),
-            ("Каркас / Брус", "qp1_2"),
-            ("Газобетон / Монолит", "qp1_3"),
-            ("Пока не определился, нужна консультация", "qp1_4"),
-        ]),
-        parse_mode="HTML",
-    )
+    await _qp_send_q1(call)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qp1_"), state=QuizProject.q1)
 async def qp_q2(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    mapping = {
-        "qp1_1": "Кирпич",
-        "qp1_2": "Каркас / Брус",
-        "qp1_3": "Газобетон / Монолит",
-        "qp1_4": "Пока не определился, нужна консультация",
-    }
-    await state.update_data(q1=mapping[call.data])
-    await QuizProject.q2.set()
-
-    await call.message.edit_caption(
-        caption="Вопрос 2 из 5\n\nСколько этажей будет в доме?",
-        reply_markup=ikb([
-            ("1 этаж", "qp2_1"),
-            ("2 этажа", "qp2_2"),
-            ("3 этажа", "qp2_3"),
-            ("Другое", "qp2_4"),
-        ]),
-        parse_mode="HTML",
-    )
+    await _qp_send_q2(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qp2_"), state=QuizProject.q2)
 async def qp_q3(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    mapping = {"qp2_1": "1 этаж", "qp2_2": "2 этажа", "qp2_3": "3 этажа", "qp2_4": "Другое"}
-    await state.update_data(q2=mapping[call.data])
-    await QuizProject.q3.set()
-
-    await call.message.edit_caption(
-        caption="Вопрос 3 из 5\n\nКакую общую площадь вы рассматриваете?",
-        reply_markup=ikb([
-            ("до 150 м²", "qp3_1"),
-            ("до 250 м²", "qp3_2"),
-            ("до 500 м²", "qp3_3"),
-            ("Более 500 м²", "qp3_4"),
-        ]),
-        parse_mode="HTML",
-    )
+    await _qp_send_q3(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qp3_"), state=QuizProject.q3)
 async def qp_q4(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    mapping = {
-        "qp3_1": "до 150 м²",
-        "qp3_2": "до 250 м²",
-        "qp3_3": "до 500 м²",
-        "qp3_4": "Более 500 м²",
-    }
-    await state.update_data(q3=mapping[call.data])
-    await QuizProject.q4.set()
-
-    await call.message.edit_caption(
-        caption="Вопрос 4 из 5\n\nЕсть ли у вас эскиз-проект, который нравится?",
-        reply_markup=ikb([
-            ("Да, есть проект, который нравится", "qp4_1"),
-            ("Есть картинка, рисунок, фото, которые нравятся", "qp4_2"),
-            ("Выберу из каталога", "qp4_3"),
-            ("Нет", "qp4_4"),
-        ]),
-        parse_mode="HTML",
-    )
+    await _qp_send_q4(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qp4_"), state=QuizProject.q4)
 async def qp_q5(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    mapping = {
-        "qp4_1": "Да, есть проект, который нравится",
-        "qp4_2": "Есть картинка, рисунок, фото, которые нравятся",
-        "qp4_3": "Выберу из каталога",
-        "qp4_4": "Нет",
-    }
-    await state.update_data(q4=mapping[call.data])
-    await QuizProject.q5.set()
-
-    await call.message.edit_caption(
-        caption="Вопрос 5 из 5\n\nКогда вы планируете строительство?",
-        reply_markup=ikb([
-            ("В ближайшее время", "qp5_1"),
-            ("Через 1–3 месяца", "qp5_2"),
-            ("Через 3–6 месяцев", "qp5_3"),
-            ("Не знаю, нужна консультация", "qp5_4"),
-        ]),
-        parse_mode="HTML",
-    )
+    await _qp_send_q5(call, state)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith("qp5_"), state=QuizProject.q5)
 async def qp_phone(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    mapping = {
-        "qp5_1": "В ближайшее время",
-        "qp5_2": "Через 1–3 месяца",
-        "qp5_3": "Через 3–6 месяцев",
-        "qp5_4": "Не знаю, нужна консультация",
-    }
-    await state.update_data(q5=mapping[call.data])
-    await QuizProject.phone.set()
-
-    await call.message.edit_caption(
-        caption="Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
-        parse_mode="HTML",
-    )
-    await call.message.edit_reply_markup(reply_markup=None)
-    await call.message.answer(
-        "Отлично! Остался последний шаг\n\nОставьте ваш телефон для связи:",
-        reply_markup=phone_kb(),
-    )
+    await _qp_request_phone(call, state)
 
 
 # ==================== ЗАПУСК ====================
