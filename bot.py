@@ -90,12 +90,12 @@ CATALOG_TEXT = (
 
 
 CONTACTS_TEXT = (
-    "📞 Контакты СК «Вместе»\n\n"
-    "📱 Телефоны:\n"
+    "📞 <b>Контакты СК «Вместе»</b>\n\n"
+    "📱 <b>Телефоны:</b>\n"
     "• +7 (928) 621-11-05\n"
     "• +7 (919) 892-94-02\n"
     "• +7 (918) 538-14-55\n\n"
-    "📍 Адрес офиса:\n"
+    "📍 <b>Адрес офиса:</b>\n"
     "Ростов-на-Дону,\n"
     "Береговая 8 (Риверсайд), офис 512"
 )
@@ -153,11 +153,14 @@ def sites_keyboard() -> InlineKeyboardMarkup:
 
 
 def contacts_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text="💬 Написать нам — https://t.me/wmeste851", url="https://t.me/wmeste851"))
-    keyboard.add(InlineKeyboardButton(text="📣 Telegram-канал — https://t.me/skVmeste", url="https://t.me/skVmeste"))
-    keyboard.add(InlineKeyboardButton(text="🟢 WhatsApp — https://wa.me/79286211105", url="https://wa.me/79286211105"))
-    keyboard.add(InlineKeyboardButton(text="📞 Позвонить — tel:+79286211105", url="tel:+79286211105"))
+    keyboard = InlineKeyboardMarkup(row_width=1)
+
+    keyboard.add(
+        InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/wmeste851"),
+        InlineKeyboardButton(text="📣 Наш Telegram-канал", url="https://t.me/skVmeste"),
+        InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79286211105"),
+        InlineKeyboardButton(text="📞 Позвонить", url="tel:+79286211105"),
+    )
     return keyboard
 
 
@@ -240,8 +243,11 @@ async def sites_handler(message: types.Message) -> None:
 
 @dp.message_handler(lambda msg: msg.text == "📞 Контакты")
 async def contacts_handler(message: types.Message) -> None:
-    await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
-
+    await message.answer(
+        CONTACTS_TEXT,
+        reply_markup=contacts_keyboard(),
+        parse_mode="HTML"
+    )
 
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
 async def cost_intro(message: types.Message) -> None:
