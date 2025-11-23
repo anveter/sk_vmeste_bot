@@ -215,39 +215,6 @@ async def catalog_handler(message: types.Message) -> None:
 async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
 
-# ---------------------------
-# 📞 БЛОК: КОНТАКТЫ
-# ---------------------------
-
-CONTACTS_TEXT = (
-    "📞 <b>Контакты СК «Вместе»</b>\n\n"
-    "📱 <b>Телефоны:</b>\n"
-    "• +7 (928) 621-11-05\n"
-    "• +7 (919) 892-94-02\n"
-    "• +7 (918) 538-14-55\n\n"
-    "📍 <b>Адрес офиса:</b>\n"
-    "Ростов-на-Дону,\n"
-    "Береговая 8 (Риверсайд), офис 512"
-)
-
-def contacts_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/wmeste851"),
-        InlineKeyboardButton(text="📣 Наш Telegram-канал", url="https://t.me/skVmeste"),
-        InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79286211105"),
-        InlineKeyboardButton(text="📞 Позвонить", url="tel:+79286211105"),
-    )
-    return keyboard
-
-@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
-async def contacts_handler(message: types.Message) -> None:
-    await message.answer(
-        CONTACTS_TEXT,
-        reply_markup=contacts_keyboard(),
-        parse_mode="HTML"
-    )
-
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
 async def cost_intro(message: types.Message) -> None:
     await bot.send_photo(message.chat.id, COST_INTRO_PHOTO, caption=COST_INTRO_TEXT, reply_markup=cost_intro_keyboard())
