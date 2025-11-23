@@ -238,7 +238,7 @@ def contacts_keyboard() -> InlineKeyboardMarkup:
     return keyboard
 
 
-@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
+@dp.message_handler(lambda msg: msg.text and msg.text.endswith("Контакты"))
 async def contacts_handler(message: types.Message):
     await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
 
