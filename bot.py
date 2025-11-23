@@ -215,6 +215,10 @@ async def catalog_handler(message: types.Message) -> None:
 async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
 
+# ---------------------------------------------
+# БЛОК: КОНТАКТЫ
+# ---------------------------------------------
+
 CONTACTS_TEXT = (
     "📞 <b>Контакты СК «Вместе»</b>\n\n"
     "📱 <b>Телефоны:</b>\n"
@@ -238,7 +242,7 @@ def contacts_keyboard() -> InlineKeyboardMarkup:
     return keyboard
 
 
-@dp.message_handler(lambda msg: msg.text and msg.text.endswith("Контакты"))
+@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
 async def contacts_handler(message: types.Message):
     await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
 
