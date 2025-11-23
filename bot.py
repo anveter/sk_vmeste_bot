@@ -88,19 +88,6 @@ CATALOG_TEXT = (
     "https://disk.yandex.ru/i/UBQkSxjZVyUKPw"
 )
 
-
-CONTACTS_TEXT = (
-    "📞 <b>Контакты СК «Вместе»</b>\n\n"
-    "📱 <b>Телефоны:</b>\n"
-    "• +7 (928) 621-11-05\n"
-    "• +7 (919) 892-94-02\n"
-    "• +7 (918) 538-14-55\n\n"
-    "📍 <b>Адрес офиса:</b>\n"
-    "Ростов-на-Дону,\n"
-    "Береговая 8 (Риверсайд), офис 512"
-)
-
-
 COST_INTRO_PHOTO = "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height"
 COST_INTRO_TEXT = (
     "Дома из кирпича, газобетона и монолита в Ростове-на-Дону с гарантией 5 лет напрямую от производителя “под ключ”\n\n"
@@ -149,18 +136,6 @@ def sites_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text="🏠 Основной сайт — https://ск-вместе.рф", url="https://ск-вместе.рф"))
     keyboard.add(InlineKeyboardButton(text="📐 Проектирование — https://ск-вместе-проектирование.рф", url="https://ск-вместе-проектирование.рф"))
-    return keyboard
-
-
-def contacts_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup(row_width=1)
-
-    keyboard.add(
-        InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/wmeste851"),
-        InlineKeyboardButton(text="📣 Наш Telegram-канал", url="https://t.me/skVmeste"),
-        InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79286211105"),
-        InlineKeyboardButton(text="📞 Позвонить", url="tel:+79286211105"),
-    )
     return keyboard
 
 
@@ -240,14 +215,6 @@ async def catalog_handler(message: types.Message) -> None:
 async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
 
-
-@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
-async def contacts_handler(message: types.Message) -> None:
-    await message.answer(
-        CONTACTS_TEXT,
-        reply_markup=contacts_keyboard(),
-        parse_mode="HTML"
-    )
 
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
 async def cost_intro(message: types.Message) -> None:
@@ -404,3 +371,35 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# ---------------------------
+# 📞 БЛОК: КОНТАКТЫ
+# ---------------------------
+
+CONTACTS_TEXT = (
+    "📞 <b>Контакты СК «Вместе»</b>\n\n"
+    "📱 <b>Телефоны:</b>\n"
+    "• +7 (928) 621-11-05\n"
+    "• +7 (919) 892-94-02\n"
+    "• +7 (918) 538-14-55\n\n"
+    "📍 <b>Адрес офиса:</b>\n"
+    "Ростов-на-Дону,\n"
+    "Береговая 8 (Риверсайд), офис 512"
+)
+
+def contacts_keyboard() -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    keyboard.add(
+        InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/wmeste851"),
+        InlineKeyboardButton(text="📣 Наш Telegram-канал", url="https://t.me/skVmeste"),
+        InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79286211105"),
+        InlineKeyboardButton(text="📞 Позвонить", url="tel:+79286211105"),
+    )
+    return keyboard
+
+@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
+async def contacts_handler(message: types.Message) -> None:
+    await message.answer(
+        CONTACTS_TEXT,
+        reply_markup=contacts_keyboard(),
+        parse_mode="HTML"
+    )
