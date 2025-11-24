@@ -88,18 +88,12 @@ CATALOG_TEXT = (
     "https://disk.yandex.ru/i/UBQkSxjZVyUKPw"
 )
 
-
 CONTACTS_TEXT = (
-    "📞 Контакты СК «Вместе»\n\n"
-    "📱 Телефоны:\n"
-    "• +7 (928) 621-11-05\n"
-    "• +7 (919) 892-94-02\n"
-    "• +7 (918) 538-14-55\n\n"
-    "📍 Адрес офиса:\n"
-    "Ростов-на-Дону,\n"
-    "Береговая 8 (Риверсайд), офис 512"
+    "📞 <b>Контакты</b>\n\n"
+    "📱 Телефон: <b>+7 (918) 538-14-55</b>\n\n"
+    "📣 Telegram-канал:\n"
+    "https://t.me/skVmeste"
 )
-
 
 COST_INTRO_PHOTO = "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height"
 COST_INTRO_TEXT = (
@@ -153,12 +147,12 @@ def sites_keyboard() -> InlineKeyboardMarkup:
 
 
 def contacts_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text="💬 Написать нам — https://t.me/wmeste851", url="https://t.me/wmeste851"))
-    keyboard.add(InlineKeyboardButton(text="📣 Telegram-канал — https://t.me/skVmeste", url="https://t.me/skVmeste"))
-    keyboard.add(InlineKeyboardButton(text="🟢 WhatsApp — https://wa.me/79286211105", url="https://wa.me/79286211105"))
-    keyboard.add(InlineKeyboardButton(text="📞 Позвонить — tel:+79286211105", url="tel:+79286211105"))
-    return keyboard
+    kb = InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        InlineKeyboardButton("📞 Позвонить", url="tel:+79185381455"),
+        InlineKeyboardButton("📣 Telegram-канал", url="https://t.me/skVmeste"),
+    )
+    return kb
 
 
 def cost_intro_keyboard() -> InlineKeyboardMarkup:
@@ -238,8 +232,8 @@ async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
 
 
-@dp.message_handler(text="📞 Контакты")
-async def contacts_handler(message: types.Message) -> None:
+@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
+async def contacts_handler(message: types.Message):
     await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
 
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
