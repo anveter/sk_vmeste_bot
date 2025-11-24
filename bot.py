@@ -163,6 +163,38 @@ def get_admin_chat_id() -> Optional[int]:
         return int(ADMIN_CHAT_ID)
     return None
 
+# ---------------------------------------------
+# КОНТАКТЫ
+# ---------------------------------------------
+@dp.message_handler(lambda m: m.text == "📞 Контакты")
+async def contacts(message: types.Message):
+    kb = InlineKeyboardMarkup(row_width=2)
+
+    # Ряд 1 — менеджер + Telegram канал
+    kb.add(
+        InlineKeyboardButton("💬 Написать нам", url="https://t.me/wmeste851"),
+        InlineKeyboardButton("📣 Telegram-канал", url="https://t.me/skVmeste")
+    )
+
+    # Ряд 2 — WhatsApp + Позвонить
+    kb.add(
+        InlineKeyboardButton("🟢 WhatsApp", url="https://wa.me/79286211105"),
+        InlineKeyboardButton("📞 Позвонить", url="tel:+79286211105")
+    )
+
+    await message.answer(
+        "📞 <b>Контакты СК «Вместе»</b>\n\n"
+        "📱 <b>Телефоны:</b>\n"
+        "• +7 (928) 621-11-05\n"
+        "• +7 (919) 892-94-02\n"
+        "• +7 (918) 538-14-55\n\n"
+        "📍 <b>Адрес офиса:</b>\n"
+        "Ростов-на-Дону,\n"
+        "Береговая 8 (Риверсайд), офис 512\n\n"
+        "🕘 <i>График работы:</i> ежедневно с 9:00 до 20:00",
+        reply_markup=kb
+    )
+
 
 @dp.message_handler(commands=["start"])
 async def start_command(message: types.Message) -> None:
@@ -214,38 +246,6 @@ async def catalog_handler(message: types.Message) -> None:
 @dp.message_handler(lambda msg: msg.text == "🌐 Сайты компании")
 async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
-
-# ---------------------------------------------
-# КОНТАКТЫ
-# ---------------------------------------------
-@dp.message_handler(lambda m: m.text == "📞 Контакты")
-async def contacts(message: types.Message):
-    kb = InlineKeyboardMarkup(row_width=2)
-
-    # Ряд 1 — менеджер + Telegram канал
-    kb.add(
-        InlineKeyboardButton("💬 Написать нам", url="https://t.me/wmeste851"),
-        InlineKeyboardButton("📣 Telegram-канал", url="https://t.me/skVmeste")
-    )
-
-    # Ряд 2 — WhatsApp + Позвонить
-    kb.add(
-        InlineKeyboardButton("🟢 WhatsApp", url="https://wa.me/79286211105"),
-        InlineKeyboardButton("📞 Позвонить", url="tel:+79286211105")
-    )
-
-    await message.answer(
-        "📞 <b>Контакты СК «Вместе»</b>\n\n"
-        "📱 <b>Телефоны:</b>\n"
-        "• +7 (928) 621-11-05\n"
-        "• +7 (919) 892-94-02\n"
-        "• +7 (918) 538-14-55\n\n"
-        "📍 <b>Адрес офиса:</b>\n"
-        "Ростов-на-Дону,\n"
-        "Береговая 8 (Риверсайд), офис 512\n\n"
-        "🕘 <i>График работы:</i> ежедневно с 9:00 до 20:00",
-        reply_markup=kb
-    )
     
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
 async def cost_intro(message: types.Message) -> None:
