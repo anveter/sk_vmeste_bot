@@ -192,10 +192,6 @@ def get_admin_chat_id() -> Optional[int]:
         return int(ADMIN_CHAT_ID)
     return None
 
-@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
-async def contacts_handler(message: types.Message):
-    await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
-
 @dp.message_handler(commands=["start"])
 async def start_command(message: types.Message) -> None:
     await message.answer(START_MESSAGE, reply_markup=main_menu())
@@ -246,6 +242,10 @@ async def catalog_handler(message: types.Message) -> None:
 @dp.message_handler(lambda msg: msg.text == "🌐 Сайты компании")
 async def sites_handler(message: types.Message) -> None:
     await message.answer("Выберите сайт:", reply_markup=sites_keyboard())
+
+@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
+async def contacts_handler(message: types.Message):
+    await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
     
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
 async def cost_intro(message: types.Message) -> None:
