@@ -96,11 +96,7 @@ CONTACTS_TEXT = (
     "• +7 (918) 538-14-55\n\n"
     "📍 <b>Адрес офиса:</b>\n"
     "Ростов-на-Дону,\n"
-    "Береговая 8 (Риверсайд), офис 512\n\n"
-    "🔗 <b>Доп. контакты:</b>\n"
-    "• Telegram-канал: https://t.me/skVmeste\n"
-    "• Менеджер: https://t.me/wmeste851\n"
-    "• WhatsApp: https://wa.me/79286211105"
+    "Береговая 8 (Риверсайд), офис 512"
 )
 
 COST_INTRO_PHOTO = "https://avatars.mds.yandex.net/get-altay/1879888/2a000001865205a565b7f2ceeb5211295fb7/XXL_height"
@@ -154,18 +150,41 @@ def sites_keyboard() -> InlineKeyboardMarkup:
     return keyboard
 
 def contacts_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup(row_width=1)
+    kb = InlineKeyboardMarkup(row_width=1)
 
-    # исправленные ссылки — БЕЗ "+"
-    keyboard.add(InlineKeyboardButton("📞 Позвонить +7 (928) 621-11-05", url="tel:79286211105"))
-    keyboard.add(InlineKeyboardButton("📞 Позвонить +7 (919) 892-94-02", url="tel:79198929402"))
-    keyboard.add(InlineKeyboardButton("📞 Позвонить +7 (918) 538-14-55", url="tel:79185381455"))
+    # телефоны через tel: БЕЗ плюса внутри URL
+    kb.add(
+        InlineKeyboardButton(
+            text="📞 Позвонить +7 (928) 621-11-05",
+            url="tel:79286211105"
+        ),
+        InlineKeyboardButton(
+            text="📞 Позвонить +7 (919) 892-94-02",
+            url="tel:79198929402"
+        ),
+        InlineKeyboardButton(
+            text="📞 Позвонить +7 (918) 538-14-55",
+            url="tel:79185381455"
+        ),
+    )
 
-    keyboard.add(InlineKeyboardButton("📣 Telegram-канал", url="https://t.me/skVmeste"))
-    keyboard.add(InlineKeyboardButton("👤 Менеджер", url="https://t.me/wmeste851"))
-    keyboard.add(InlineKeyboardButton("🟢 Написать в WhatsApp", url="https://wa.me/79286211105"))
+    # ссылки
+    kb.add(
+        InlineKeyboardButton(
+            text="💬 Написать менеджеру в Telegram",
+            url="https://t.me/wmeste851"
+        ),
+        InlineKeyboardButton(
+            text="📣 Telegram-канал",
+            url="https://t.me/skVmeste"
+        ),
+        InlineKeyboardButton(
+            text="🟢 Написать в WhatsApp",
+            url="https://wa.me/79286211105"
+        ),
+    )
 
-    return keyboard
+    return kb
 
 def cost_intro_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
@@ -190,6 +209,13 @@ def get_admin_chat_id() -> Optional[int]:
     if ADMIN_CHAT_ID and ADMIN_CHAT_ID.isdigit():
         return int(ADMIN_CHAT_ID)
     return None
+
+@dp.message_handler(lambda msg: msg.text == "📞 Контакты")
+async def contacts_handler(message: types.Message):
+    await message.answer(
+        CONTACTS_TEXT,
+        reply_markup=contacts_keyboard()
+    )
 
 @dp.message_handler(commands=["start"])
 async def start_command(message: types.Message) -> None:
