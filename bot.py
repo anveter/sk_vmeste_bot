@@ -241,10 +241,6 @@ async def sites_handler(message: types.Message) -> None:
 @dp.message_handler(lambda msg: msg.text == "📞 Контакты")
 async def contacts_handler(message: types.Message) -> None:
     await message.answer(CONTACTS_TEXT, reply_markup=contacts_keyboard())
-    await message.answer_contact(
-        phone_number="+79286211105",
-        first_name="Позвонить",
-    )
 
 
 @dp.message_handler(lambda msg: msg.text == "🏗 Расчёт стоимости дома")
