@@ -85,7 +85,7 @@ START_MESSAGE = (
 
 CATALOG_TEXT = (
     "📂 Каталог проектов:\n"
-    "https://disk.yandex.ru/i/UBQkSxjZVyUKPw"
+    "https://disk.yandex.ru/d/1df7Hd6PHhoH2g"
 )
 
 
