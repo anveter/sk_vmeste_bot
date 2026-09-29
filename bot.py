@@ -155,7 +155,7 @@ def contacts_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text="💬 Написать нам", url="https://t.me/aveter"))
     keyboard.add(InlineKeyboardButton(text="📣 Telegram-канал", url="https://t.me/skVmeste"))
-    keyboard.add(InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79286211105"))
+    keyboard.add(InlineKeyboardButton(text="🟢 WhatsApp", url="https://wa.me/79185381455"))
     # keyboard.add(InlineKeyboardButton(text="📞 Позвонить — tel:+79185381455", url="tel:+9185381455"))
     return keyboard
 
