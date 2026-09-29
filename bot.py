@@ -85,7 +85,7 @@ START_MESSAGE = (
 
 CATALOG_TEXT = (
     "📂 Каталог проектов:\n"
-    "https://disk.yandex.ru/d/1df7Hd6PHhoH2g"
+    "https://disk.yandex.ru/i/vgSCzOUTM305Iw"
 )
 
 
@@ -140,7 +140,7 @@ def contact_request_keyboard() -> ReplyKeyboardMarkup:
 def about_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text="📝 Оставить заявку", callback_data="lead"))
-    keyboard.add(InlineKeyboardButton(text="💬 Написать менеджеру", url="https://t.me/wmeste851"))
+    keyboard.add(InlineKeyboardButton(text="💬 Написать менеджеру", url="https://t.me/aveter"))
     return keyboard
 
 
