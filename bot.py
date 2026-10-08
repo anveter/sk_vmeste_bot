@@ -29,11 +29,6 @@ class LeadForm(StatesGroup):
     waiting_for_contact = State()
 
 
-class ConsultationForm(StatesGroup):
-    waiting_for_contact = State()
-    waiting_for_question = State()
-
-
 class CostQuiz(StatesGroup):
     floors = State()
     material = State()
@@ -142,33 +137,6 @@ def contact_request_keyboard() -> ReplyKeyboardMarkup:
     return keyboard
 
 
-def consultation_keyboard() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup(row_width=1)
-
-    keyboard.add(
-        InlineKeyboardButton(
-            text="💬 Написать менеджеру",
-            url="https://t.me/aveter"
-        )
-    )
-
-    keyboard.add(
-        InlineKeyboardButton(
-            text="📞 Оставить номер — мы свяжемся",
-            callback_data="consultation_contact"
-        )
-    )
-
-    keyboard.add(
-        InlineKeyboardButton(
-            text="❓ Задать вопрос здесь",
-            callback_data="consultation_question"
-        )
-    )
-
-    return keyboard
-
-
 def about_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text="📝 Оставить заявку", callback_data="lead"))
@@ -251,128 +219,6 @@ async def lead_contact(message: types.Message, state: FSMContext) -> None:
     if admin_chat_id:
         await bot.send_message(admin_chat_id, f"Новая заявка\nИмя: {name}\nТелефон: {phone}")
     await message.answer("✅ Спасибо! Мы свяжемся с вами.", reply_markup=main_menu())
-    await state.finish()
-
-
-# -------------------
-# КОНСУЛЬТАЦИЯ
-# -------------------
-
-@dp.message_handler(
-    lambda msg: msg.text and "консультац" in msg.text.lower()
-)
-async def consultation_start(message: types.Message) -> None:
-    await message.answer(
-        "📞 Хотите получить консультацию по строительству?\n\n"
-        "Выберите удобный способ связи 👇",
-        reply_markup=consultation_keyboard()
-    )
-
-
-@dp.callback_query_handler(text="consultation_contact")
-async def consultation_contact_start(callback_query: CallbackQuery) -> None:
-    await callback_query.answer()
-
-    await ConsultationForm.waiting_for_contact.set()
-
-    await callback_query.message.answer(
-        "📞 Оставьте ваш номер телефона.\n\n"
-        "Нажмите кнопку ниже — Telegram сам отправит ваш контакт 👇",
-        reply_markup=contact_request_keyboard()
-    )
-
-
-@dp.message_handler(
-    state=ConsultationForm.waiting_for_contact,
-    content_types=[ContentType.CONTACT, ContentType.TEXT]
-)
-async def consultation_contact_receive(
-    message: types.Message,
-    state: FSMContext
-) -> None:
-
-    phone = (
-        message.contact.phone_number
-        if message.contact
-        else message.text.strip()
-    )
-
-    user = message.from_user
-    full_name = user.full_name or "Не указано"
-    username = f"@{user.username}" if user.username else "Не указан"
-
-    admin_chat_id = get_admin_chat_id()
-
-    if admin_chat_id:
-        await bot.send_message(
-            admin_chat_id,
-            "🔥 <b>Новая заявка на консультацию</b>\n\n"
-            f"👤 Имя: {full_name}\n"
-            f"📞 Телефон: {phone}\n"
-            f"💬 Telegram: {username}\n"
-            f"🆔 Telegram ID: <code>{user.id}</code>"
-        )
-
-    await message.answer(
-        "✅ Спасибо!\n\n"
-        "Ваш контакт передан менеджеру. "
-        "Мы свяжемся с вами в ближайшее время.",
-        reply_markup=main_menu()
-    )
-
-    await state.finish()
-
-
-@dp.callback_query_handler(text="consultation_question")
-async def consultation_question_start(
-    callback_query: CallbackQuery
-) -> None:
-
-    await callback_query.answer()
-
-    await ConsultationForm.waiting_for_question.set()
-
-    await callback_query.message.answer(
-        "❓ Напишите ваш вопрос одним сообщением 👇\n\n"
-        "Менеджер получит его и сможет с вами связаться.",
-        reply_markup=ReplyKeyboardRemove()
-    )
-
-
-@dp.message_handler(
-    state=ConsultationForm.waiting_for_question,
-    content_types=ContentType.TEXT
-)
-async def consultation_question_receive(
-    message: types.Message,
-    state: FSMContext
-) -> None:
-
-    question = message.text.strip()
-
-    user = message.from_user
-    full_name = user.full_name or "Не указано"
-    username = f"@{user.username}" if user.username else "Не указан"
-
-    admin_chat_id = get_admin_chat_id()
-
-    if admin_chat_id:
-        await bot.send_message(
-            admin_chat_id,
-            "❓ <b>Новый вопрос из бота</b>\n\n"
-            f"👤 Имя: {full_name}\n"
-            f"💬 Telegram: {username}\n"
-            f"🆔 Telegram ID: <code>{user.id}</code>\n\n"
-            f"<b>Вопрос:</b>\n"
-            f"{question}"
-        )
-
-    await message.answer(
-        "✅ Спасибо! Ваш вопрос передан менеджеру.\n\n"
-        "Мы свяжемся с вами в ближайшее время.",
-        reply_markup=main_menu()
-    )
-
     await state.finish()
 
 
